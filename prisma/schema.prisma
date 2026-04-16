@@ -923,6 +923,8 @@ model Recommendation {
   targetPicture    String?
   reason           String
   status           String                   @default("active")
+  recommendedRankId   Int?
+  recommendedRankName String?
   createdById      BigInt
   createdByName    String?
   editedById       BigInt?

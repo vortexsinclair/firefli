@@ -30,12 +30,16 @@ async function handler(
 
   if (req.method === 'PATCH') {
     return withPermissionCheck(async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+      const existing = await getConfig('recommendations', parseInt(req.query.id as string));
+      const allowedRanks = Array.isArray(req.body.allowedRanks) ? req.body.allowedRanks : (existing?.allowedRanks ?? []);
+      const enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : (existing?.enabled ?? false);
       await setConfig('recommendations', {
-        enabled: req.body.enabled
+        enabled,
+        allowedRanks,
       }, parseInt(req.query.id as string));
       try {
         const { logAudit } = await import('@/utils/logs');
-        await logAudit(parseInt(req.query.id as string), (req as any).session?.userid || null, 'settings.update', 'recommendations', { enabled: req.body.enabled });
+        await logAudit(parseInt(req.query.id as string), (req as any).session?.userid || null, 'settings.update', 'recommendations', { enabled, allowedRanks });
       } catch (e) {}
       return res.status(200).json({ success: true });
     }, 'manage_features')(req, res);

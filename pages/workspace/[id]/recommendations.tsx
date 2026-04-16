@@ -29,6 +29,8 @@ import {
   IconTrash,
   IconSortDescending,
   IconSortAscending,
+  IconSettings,
+  IconShield,
 } from "@tabler/icons-react";
 import sanitizeHtml from "sanitize-html";
 import ReactMarkdown from "react-markdown";
@@ -78,6 +80,8 @@ type Recommendation = {
   updatedAt: string;
   votes: RecommendationVote[];
   comments: RecommendationComment[];
+  recommendedRankId: number | null;
+  recommendedRankName: string | null;
 };
 
 export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
@@ -88,6 +92,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
       where: { workspaceGroupId, key: "recommendations" },
     });
     let recommendationsEnabled = false;
+    let allowedRanks: { id: number; name: string; rank: number }[] = [];
     if (config?.value) {
       let val = config.value;
       if (typeof val === "string") {
@@ -101,6 +106,9 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
         typeof val === "object" && val !== null && "enabled" in val
           ? ((val as { enabled?: boolean }).enabled ?? false)
           : false;
+      if (typeof val === "object" && val !== null && Array.isArray((val as any).allowedRanks)) {
+        allowedRanks = (val as any).allowedRanks;
+      }
     }
     if (!recommendationsEnabled) {
       return { notFound: true };
@@ -131,6 +139,49 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
     const userPermissions = user?.roles?.[0]?.permissions || [];
     const userIsAdmin = user?.workspaceMemberships?.[0]?.isAdmin || false;
 
+    // Fetch cached ranks for all recommended users
+    const targetUserIds = [...new Set(recommendations.map((r) => r.targetUserId))];
+    const cachedRanks = targetUserIds.length
+      ? await prisma.rank.findMany({
+          where: { workspaceGroupId, userId: { in: targetUserIds } },
+        })
+      : [];
+
+    // Fetch Roblox roles once for name resolution
+    let robloxRoles: { id: number; name: string; rank: number }[] = [];
+    const roleIdToName = new Map<number, string>();
+    const rankNumToName = new Map<number, string>();
+    try {
+      const rolesRes = await fetch(
+        `https://groups.roblox.com/v1/groups/${workspaceGroupId}/roles`,
+      );
+      if (rolesRes.ok) {
+        const rolesData = await rolesRes.json();
+        robloxRoles = ((rolesData.roles || []) as any[]).map((r: any) => ({
+          id: r.id as number,
+          name: r.name as string,
+          rank: r.rank as number,
+        }));
+        robloxRoles.forEach((role) => {
+          roleIdToName.set(role.id, role.name);
+          rankNumToName.set(role.rank, role.name);
+        });
+      }
+    } catch {}
+
+    // Build userId → rankName map (same logic as staff.ts)
+    const initialCurrentRanks: Record<string, string> = {};
+    for (const r of cachedRanks) {
+      const storedValue = Number(r.rankId);
+      let name = "Guest";
+      if (storedValue > 255) {
+        name = roleIdToName.get(storedValue) ?? "Guest";
+      } else {
+        name = rankNumToName.get(storedValue) ?? "Guest";
+      }
+      initialCurrentRanks[r.userId.toString()] = name;
+    }
+
     return {
       props: {
         initialRecommendations: JSON.parse(
@@ -140,6 +191,8 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
         ),
         userPermissions,
         userIsAdmin,
+        allowedRanks,
+        initialCurrentRanks,
       },
     };
   },
@@ -150,6 +203,8 @@ type pageProps = {
   initialRecommendations: Recommendation[];
   userPermissions: string[];
   userIsAdmin: boolean;
+  allowedRanks: { id: number; name: string; rank: number }[];
+  initialCurrentRanks: Record<string, string>;
 };
 
 const BG_COLORS = [
@@ -221,6 +276,20 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editReason, setEditReason] = useState("");
   const [sortByVotes, setSortByVotes] = useState(false);
+  // Settings modal
+  const [showSettings, setShowSettings] = useState(false);
+  const [groupRoles, setGroupRoles] = useState<{ id: number; name: string; rank: number }[]>([]);
+  const [allowedRanks, setAllowedRanks] = useState<{ id: number; name: string; rank: number }[]>(props.allowedRanks);
+  const [settingsRankIds, setSettingsRankIds] = useState<Set<number>>(new Set(props.allowedRanks.map((r) => r.id)));
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  // Rank for create/edit
+  const [selectedRankId, setSelectedRankId] = useState<number | null>(null);
+  const [selectedRankName, setSelectedRankName] = useState<string>("");
+  const [editRankId, setEditRankId] = useState<number | null>(null);
+  const [editRankName, setEditRankName] = useState<string>("");
+  // Current rank map: userId -> rank name (pre-fetched SSR)
+  const [currentRankMap, setCurrentRankMap] = useState<Record<string, string | null>>(props.initialCurrentRanks);
   const userPermissions = props.userPermissions;
   const userIsAdmin = props.userIsAdmin;
   const canPost =
@@ -321,12 +390,16 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
         targetUserId: selectedUser.userId,
         targetUsername: selectedUser.username,
         reason: reason.trim(),
+        recommendedRankId: selectedRankId ?? null,
+        recommendedRankName: selectedRankName || null,
       });
       if (activeTab === "active") {
         setRecommendations([res.data.recommendation, ...recommendations]);
       }
       setSelectedUser(null);
       setReason("");
+      setSelectedRankId(null);
+      setSelectedRankName("");
       setShowCreate(false);
       toast.success("Recommendation created!");
     } catch (err: any) {
@@ -447,7 +520,7 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
     try {
       const res = await axios.put(
         `/api/workspace/${id}/recommendations/${recId}`,
-        { reason: editReason.trim() },
+        { reason: editReason.trim(), recommendedRankId: editRankId ?? null, recommendedRankName: editRankName || null },
       );
       setRecommendations((prev) =>
         prev.map((r) => (r.id === recId ? res.data.recommendation : r)),
@@ -491,10 +564,117 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
     }
   }, [openDropdown]);
 
+  const openSettingsModal = async () => {
+    setShowSettings(true);
+    if (groupRoles.length > 0) return;
+    setLoadingRoles(true);
+    try {
+      const res = await axios.get(`/api/workspace/${id}/ranks`);
+      setGroupRoles(res.data.ranks || []);
+    } catch {
+      toast.error("Failed to load group roles");
+    }
+    setLoadingRoles(false);
+  };
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const selected = groupRoles.filter((r) => settingsRankIds.has(r.id));
+      await axios.patch(`/api/workspace/${id}/settings/general/recommendations`, {
+        allowedRanks: selected,
+      });
+      setAllowedRanks(selected);
+      toast.success("Settings saved");
+      setShowSettings(false);
+    } catch {
+      toast.error("Failed to save settings");
+    }
+    setSavingSettings(false);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="pagePadding">
         <Toaster position="bottom-center" />
+
+        {/* Settings modal */}
+        {showSettings && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}
+          >
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-700">
+                <div>
+                  <h2 className="text-base font-semibold text-zinc-900 dark:text-white">Recommendation Settings</h2>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Select which ranks users can be recommended for</p>
+                </div>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                >
+                  <IconX size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">
+                {loadingRoles ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-zinc-400">
+                    <IconLoader2 size={18} className="animate-spin" />
+                    <span className="text-sm">Loading roles…</span>
+                  </div>
+                ) : groupRoles.length === 0 ? (
+                  <p className="text-sm text-zinc-500 text-center py-8">No roles found</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {groupRoles
+                      .filter((role) => role.rank > 0)
+                      .filter((role, idx, arr) => arr.findIndex((r) => r.name === role.name) === idx)
+                      .map((role) => (
+                        <label
+                          key={role.id}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary rounded"
+                            checked={settingsRankIds.has(role.id)}
+                            onChange={(e) => {
+                              setSettingsRankIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(role.id);
+                                else next.delete(role.id);
+                                return next;
+                              });
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-zinc-900 dark:text-white">{role.name}</span>
+                          </div>
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-zinc-100 dark:border-zinc-700 flex justify-end gap-2">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <Button
+                  classoverride="bg-primary hover:bg-primary/90 text-white dark:text-white px-4 dark:bg-primary dark:hover:bg-primary/80"
+                  workspace
+                  onPress={saveSettings}
+                  loading={savingSettings}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-medium text-zinc-900 dark:text-white">
@@ -504,16 +684,36 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
               Recommend members for promotion
             </p>
           </div>
-          {canPost && (
-            <Button
-              classoverride="bg-primary hover:bg-primary/90 text-white dark:text-white px-4 dark:bg-primary dark:hover:bg-primary/80 whitespace-nowrap"
-              workspace
-              onPress={() => setShowCreate(!showCreate)}
-            >
-              <span className="sm:hidden">{showCreate ? "Cancel" : "New"}</span>
-              <span className="hidden sm:inline">{showCreate ? "Cancel" : "New Recommendation"}</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {userIsAdmin && (
+              <button
+                onClick={openSettingsModal}
+                className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+                title="Recommendation settings"
+              >
+                <IconSettings size={20} />
+              </button>
+            )}
+            {canPost && (
+              <Button
+                classoverride="bg-primary hover:bg-primary/90 text-white dark:text-white px-4 dark:bg-primary dark:hover:bg-primary/80 whitespace-nowrap"
+                workspace
+                onPress={() => {
+                  if (!showCreate && allowedRanks.length > 0) {
+                    setSelectedRankId(allowedRanks[0].id);
+                    setSelectedRankName(allowedRanks[0].name);
+                  } else {
+                    setSelectedRankId(null);
+                    setSelectedRankName("");
+                  }
+                  setShowCreate(!showCreate);
+                }}
+              >
+                <span className="sm:hidden">{showCreate ? "Cancel" : "New"}</span>
+                <span className="hidden sm:inline">{showCreate ? "Cancel" : "New Recommendation"}</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {showCreate && canPost && (
@@ -666,6 +866,30 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
               />
             </div>
 
+            {allowedRanks.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Recommending for
+                </label>
+                <select
+                  className="w-full border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white focus:ring-1 focus:ring-primary focus:border-primary"
+                  value={selectedRankId ?? ""}
+                  onChange={(e) => {
+                    const rid = e.target.value ? parseInt(e.target.value) : null;
+                    const role = allowedRanks.find((r) => r.id === rid) ?? null;
+                    setSelectedRankId(rid);
+                    setSelectedRankName(role?.name ?? "");
+                  }}
+                >
+                  {allowedRanks.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <Button
               classoverride="bg-primary hover:bg-primary/90 text-white dark:text-white px-6 dark:bg-primary dark:hover:bg-primary/80"
               workspace
@@ -782,25 +1006,23 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
                           <h3 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-white break-all">
                             {rec.targetUsername}
                           </h3>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              rec.status === "active"
-                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                                : rec.status === "approved"
-                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                                  : rec.status === "rejected"
-                                    ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
-                            }`}
-                          >
-                            {rec.status.charAt(0).toUpperCase() +
-                              rec.status.slice(1)}
-                          </span>
                         </div>
-                        <p className="text-xs text-zinc-400 mt-0.5 break-words">
-                          <span className="sm:hidden">Posted by {rec.createdByName || "Unknown"}</span>
-                          <span className="hidden sm:inline">Recommended by {rec.createdByName || "Unknown"}</span>
-                        </p>
+                        {rec.recommendedRankName && (
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            <span className="inline-flex items-center gap-1">
+                              For{" "}
+                              <span className="text-purple-600 dark:text-purple-400 font-medium">{rec.recommendedRankName}</span>
+                            </span>
+                          </p>
+                        )}
+                        {currentRankMap[rec.targetUserId] !== undefined && (
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            Current rank:{" "}
+                            <span className="text-zinc-500 dark:text-zinc-300 font-medium">
+                              {currentRankMap[rec.targetUserId] ?? "Not in group"}
+                            </span>
+                          </p>
+                        )}
                         {rec.statusChangedByName && rec.status !== "active" && (
                           <p className="text-xs text-zinc-400 mt-0.5 break-words">
                             {rec.status.charAt(0).toUpperCase() +
@@ -817,6 +1039,25 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
                               rows={3}
                               maxLength={5000}
                             />
+                            {allowedRanks.length > 0 && (
+                              <div className="mt-2">
+                                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Recommending for</label>
+                                <select
+                                  className="w-full border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:ring-1 focus:ring-primary"
+                                  value={editRankId ?? ""}
+                                  onChange={(e) => {
+                                    const rid = e.target.value ? parseInt(e.target.value) : null;
+                                    const role = allowedRanks.find((r) => r.id === rid) ?? null;
+                                    setEditRankId(rid);
+                                    setEditRankName(role?.name ?? "");
+                                  }}
+                                >
+                                  {allowedRanks.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                             <div className="flex gap-2 mt-2">
                               <Button
                                 classoverride="bg-primary text-white text-xs px-3 py-1"
@@ -830,6 +1071,8 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
                                 onPress={() => {
                                   setEditingId(null);
                                   setEditReason("");
+                                  setEditRankId(null);
+                                  setEditRankName("");
                                 }}
                               >
                                 Cancel
@@ -844,7 +1087,7 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
                               </ReactMarkdown>
                             </div>
                             <p className="text-xs text-zinc-400 mt-1.5">
-                              {moment(rec.createdAt).fromNow()}
+                              Suggested by {rec.createdByName || "Unknown"} · {moment(rec.createdAt).fromNow()}
                             </p>
                           </>
                         )}
@@ -917,6 +1160,8 @@ const Recommendations: pageWithLayout<pageProps> = (props) => {
                                       onClick={() => {
                                         setEditingId(rec.id);
                                         setEditReason(rec.reason);
+                                        setEditRankId(rec.recommendedRankId ?? null);
+                                        setEditRankName(rec.recommendedRankName ?? "");
                                         setOpenDropdown(null);
                                       }}
                                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-t-lg"

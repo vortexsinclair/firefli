@@ -128,6 +128,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       editorName = user?.username || null;
     } catch {}
 
+    const { recommendedRankId, recommendedRankName } = req.body;
+
     const updated = await prisma.recommendation.update({
       where: { id: recId },
       data: {
@@ -135,6 +137,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         editedById: BigInt(userId),
         editedByName: editorName,
         editedAt: new Date(),
+        ...(recommendedRankId !== undefined && {
+          recommendedRankId: recommendedRankId != null ? Number(recommendedRankId) : null,
+          recommendedRankName: recommendedRankName ? recommendedRankName.toString().trim() : null,
+        }),
       },
       include: {
         votes: true,

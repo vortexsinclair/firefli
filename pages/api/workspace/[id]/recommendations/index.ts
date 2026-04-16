@@ -51,7 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const body = req.body || {};
-    const { targetUserId, targetUsername, reason } = body;
+    const { targetUserId, targetUsername, reason, recommendedRankId, recommendedRankName } = body;
     if (targetUserId == null || targetUserId === "" || !targetUsername || !reason) {
       return res.status(400).json({ success: false, error: "Missing required fields" });
     }
@@ -104,6 +104,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           reason: sanitizedReason,
           createdById: BigInt(userId),
           createdByName: creatorName,
+          recommendedRankId: recommendedRankId != null ? Number(recommendedRankId) : null,
+          recommendedRankName: recommendedRankName ? recommendedRankName.toString().trim() : null,
         },
         include: {
           votes: true,
