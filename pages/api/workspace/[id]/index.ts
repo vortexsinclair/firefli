@@ -91,7 +91,6 @@ export async function handler(
 		sessionPermissions[`See ${typeCapitalized} Sessions`] = `sessions_${type}_see`;
 		sessionPermissions[`Assign users to ${typeCapitalized} Sessions`] = `sessions_${type}_assign`;
 		sessionPermissions[`Assign Self to ${typeCapitalized} Sessions`] = `sessions_${type}_claim`;
-		sessionPermissions[`Host ${typeCapitalized} Sessions`] = `sessions_${type}_host`;
 		sessionPermissions[`Create Unscheduled ${typeCapitalized} Sessions`] = `sessions_${type}_unscheduled`;
 		sessionPermissions[`Create Scheduled ${typeCapitalized} Sessions`] = `sessions_${type}_scheduled`;
 		sessionPermissions[`Manage ${typeCapitalized} Sessions`] = `sessions_${type}_manage`;

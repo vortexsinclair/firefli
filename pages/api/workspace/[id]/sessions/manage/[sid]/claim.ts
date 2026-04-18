@@ -73,10 +73,11 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const validTypes = ['shift', 'training', 'event', 'other'];
   const type = validTypes.includes(existingSessionType) ? existingSessionType : 'other';
   const userRoles = user?.roles || [];
-  const hasHostPermission = userRoles.some((ur: any) => Array.isArray(ur.permissions) && ur.permissions.includes(`sessions_${type}_host`));
+  const hasClaimPermission = userRoles.some((ur: any) => Array.isArray(ur.permissions) && ur.permissions.includes(`sessions_${type}_claim`));
+  const hasAssignPermission = userRoles.some((ur: any) => Array.isArray(ur.permissions) && ur.permissions.includes(`sessions_${type}_assign`));
   const hasAdminPerm = userRoles.some((ur: any) => Array.isArray(ur.permissions) && ur.permissions.includes("admin"));
 
-  if (!hasHostPermission && !isAdmin && !hasAdminPerm) {
+  if (!hasClaimPermission && !hasAssignPermission && !isAdmin && !hasAdminPerm) {
     return res.status(403).json({ success: false, error: "You do not have permission to claim this session" });
   }
   if (!schedule)

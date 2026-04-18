@@ -106,7 +106,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     const type = validTypes.includes(sessionCategory) ? sessionCategory : 'other';
     const hasAssignPermission = isAdmin || userPermissions.includes(`sessions_${type}_assign`) || userPermissions.includes("admin"); 
     const hasClaimPermission = isAdmin || userPermissions.includes(`sessions_${type}_claim`) || userPermissions.includes("admin")
-    const hasHostPermission = isAdmin || userPermissions.includes(`sessions_${type}_host`) || userPermissions.includes("admin")
     const isAssigningToSelf = userId && userId.toString() === currentUserId.toString();
     const sessionSlots = (session.sessionType as any)?.slots || [];
     const matchingSlot = sessionSlots.find((s: any) => s.id === roleId);
@@ -120,10 +119,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       userPermissions,
       requiredAssign: `sessions_${type}_assign`,
       requiredClaim: `sessions_${type}_claim`,
-      requiredHost: `sessions_${type}_host`,
       hasAssignPermission,
       hasClaimPermission,
-      hasHostPermission,
       isAssigningToSelf,
       isHostRole,
       slotName,
@@ -145,18 +142,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       const isRemovingSelf = !!(existingAssignment && existingAssignment.userid.toString() === currentUserId.toString());
       let canUnclaim = false;
       
-      if (isHostRole) {
-        if (isRemovingSelf) {
-          canUnclaim = hasHostPermission;
-        } else {
-          canUnclaim = hasAssignPermission && hasHostPermission;
-        }
+      if (isRemovingSelf) {
+        canUnclaim = hasClaimPermission || hasAssignPermission;
       } else {
-        if (isRemovingSelf) {
-          canUnclaim = hasClaimPermission || hasAssignPermission;
-        } else {
-          canUnclaim = hasAssignPermission;
-        }
+        canUnclaim = hasAssignPermission;
       }
       
       if (!canUnclaim) {
@@ -168,18 +157,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     } else if (action === "claim") {
       let canClaim = false;
       
-      if (isHostRole) {
-        if (isAssigningToSelf) {
-          canClaim = hasHostPermission;
-        } else {
-          canClaim = hasAssignPermission && hasHostPermission;
-        }
+      if (isAssigningToSelf) {
+        canClaim = hasClaimPermission || hasAssignPermission;
       } else {
-        if (isAssigningToSelf) {
-          canClaim = hasClaimPermission || hasAssignPermission;
-        } else {
-          canClaim = hasAssignPermission;
-        }
+        canClaim = hasAssignPermission;
       }
       
       if (!canClaim) {
