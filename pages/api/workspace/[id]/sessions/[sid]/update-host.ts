@@ -97,7 +97,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     const isAdmin = membership?.isAdmin || false;
     const userPermissions = currentUser.roles[0].permissions;
     const hasAssignPermission = isAdmin || userPermissions.includes(`sessions_${type}_assign`);
-    const hasHostPermission = isAdmin || userPermissions.includes(`sessions_${type}_host`);
+    const hasClaimPermission = isAdmin || userPermissions.includes(`sessions_${type}_claim`);
     const isAssigningToSelf = ownerId && ownerId.toString() === currentUserId.toString();
     const isRemoving = !ownerId;
     const currentSession = await prisma.session.findUnique({
@@ -109,15 +109,15 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     let canUpdateHost = false;
     if (isRemoving) {
       if (isRemovingSelf) {
-        canUpdateHost = hasHostPermission;
+        canUpdateHost = hasClaimPermission || hasAssignPermission;
       } else {
-        canUpdateHost = hasAssignPermission && hasHostPermission;
+        canUpdateHost = hasAssignPermission;
       }
     } else {
       if (isAssigningToSelf) {
-        canUpdateHost = hasHostPermission;
+        canUpdateHost = hasClaimPermission || hasAssignPermission;
       } else {
-        canUpdateHost = hasAssignPermission && hasHostPermission;
+        canUpdateHost = hasAssignPermission;
       }
     }
     
@@ -149,18 +149,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         return res
           .status(404)
           .json({ success: false, error: "User not found" });
-      }
-      if (hasHostPermission && !hasAssignPermission && !isAssigningToSelf) {
-        const targetUserPermissions = targetUser.roles[0]?.permissions || [];
-        const targetMembership = targetUser.workspaceMemberships?.[0];
-        const targetIsAdmin = targetMembership?.isAdmin || false;
-        const targetHasHostPermission = targetIsAdmin || targetUserPermissions.includes(`sessions_${type}_host`);
-        if (!targetHasHostPermission) {
-          return res.status(403).json({ 
-            success: false, 
-            error: "You can only assign host roles to users who have the host permission" 
-          });
-        }
       }
     }
 

@@ -63,7 +63,6 @@ const RolesManager: FC<Props> = ({ roles, setRoles, grouproles }) => {
       [`See ${typeCapitalized} Sessions`]: `sessions_${type}_see`,
       [`Assign others to ${typeCapitalized} Sessions`]: `sessions_${type}_assign`,
       [`Assign Self to ${typeCapitalized} Sessions`]: `sessions_${type}_claim`,
-      [`Host ${typeCapitalized} Sessions`]: `sessions_${type}_host`,
       [`Create Unscheduled ${typeCapitalized}`]: `sessions_${type}_unscheduled`,
       [`Create Scheduled ${typeCapitalized}`]: `sessions_${type}_scheduled`,
       [`Manage ${typeCapitalized} Sessions`]: `sessions_${type}_manage`,
