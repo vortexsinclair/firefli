@@ -127,8 +127,8 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
       <div className="rounded-xl overflow-hidden">
         <div className="bg-[rgb(250,250,250)] dark:bg-zinc-900 p-6 rounded-t-xl shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="bg-[#ff0099]/10 rounded-lg p-3">
-              <IconUser className="w-6 h-6 text-[#ff0099]" />
+            <div className="bg-firefli/10 rounded-lg p-3">
+              <IconUser className="w-6 h-6 text-firefli" />
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Information</h2>
@@ -140,12 +140,12 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
         <div className="bg-[rgb(250,250,250)] dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700/40 p-6 rounded-b-xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <InfoRow icon={<IconUser className="w-5 h-5 text-[#ff0099]" />} label="Username" value={user.username} />
-              <InfoRow icon={<IconId className="w-5 h-5 text-[#ff0099]" />} label="Display Name" value={user.displayname} />
-              <InfoRow icon={<IconHash className="w-5 h-5 text-[#ff0099]" />} label="UserId" value={user.userid} />
+              <InfoRow icon={<IconUser className="w-5 h-5 text-firefli" />} label="Username" value={user.username} />
+              <InfoRow icon={<IconId className="w-5 h-5 text-firefli" />} label="Display Name" value={user.displayname} />
+              <InfoRow icon={<IconHash className="w-5 h-5 text-firefli" />} label="UserId" value={user.userid} />
               {user.joinDate && (
                 <InfoRow
-                  icon={<IconClipboard className="w-5 h-5 text-[#ff0099]" />}
+                  icon={<IconClipboard className="w-5 h-5 text-firefli" />}
                   label="Joined"
                   value={new Date(user.joinDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                 />
@@ -154,7 +154,7 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
 
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                {user.registered ? <IconCheck className="w-5 h-5 text-[#ff0099]" /> : <IconX className="w-5 h-5 text-[#ff0099]" />}
+                {user.registered ? <IconCheck className="w-5 h-5 text-firefli" /> : <IconX className="w-5 h-5 text-firefli" />}
                 <div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400">Status</div>
                   <div className="text-sm font-medium text-zinc-500 dark:text-zinc-100">{user.registered ? "Registered" : "Unregistered"}</div>
@@ -163,7 +163,7 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
 
               <div>
                 <div className="flex items-center gap-3">
-                  <IconCalendar className="w-5 h-5 text-[#ff0099]" />
+                  <IconCalendar className="w-5 h-5 text-firefli" />
                   <div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">Birthday</div>
                     <div className="text-sm font-medium text-zinc-500 dark:text-zinc-100">{birthday}</div>
@@ -178,7 +178,7 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
                         setMonth(user.birthdayMonth ? String(user.birthdayMonth) : "");
                         setDay(user.birthdayDay ? String(user.birthdayDay) : "");
                       }}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#ff0099] text-white text-sm"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-firefli text-white text-sm"
                       aria-label="Edit birthday"
                     >
                       <IconPencil className="w-4 h-4" />
@@ -227,7 +227,7 @@ export function InformationPanel({ user, isUser, isAdmin }: InformationPanelProp
                       <button
                         onClick={handleSave}
                         disabled={loading || !day || !month}
-                        className="ml-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#ff0099] text-white text-sm"
+                        className="ml-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-firefli text-white text-sm"
                       >
                         {loading ? "Saving..." : "Save"}
                       </button>

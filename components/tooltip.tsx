@@ -1,6 +1,5 @@
-import React, { FC, ReactNode } from "react";
-import { workspacestate } from "@/state";
-import { useRecoilState } from "recoil";
+import React, { FC, ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
 	children?: ReactNode;
@@ -9,61 +8,83 @@ type Props = {
 };
 
 const Tooltip: FC<Props> = ({ children, orientation, tooltipText }: Props) => {
-	const tipRef = React.createRef<HTMLDivElement>();
+	const anchorRef = useRef<HTMLDivElement>(null);
+	const [visible, setVisible] = useState(false);
+	const [position, setPosition] = useState({ top: 0, left: 0 });
 
-	function handleMouseEnter() {
-		tipRef.current!.style.opacity = '1';
-	}
-
-	function handleMouseLeave() {
-		tipRef.current!.style.opacity = '0';
-	}
-
-	const setContainerPosition = (orientation: string) => {
+	const updatePosition = () => {
+		const rect = anchorRef.current?.getBoundingClientRect();
+		if (!rect) return;
 		switch (orientation) {
-			case "right":
-				return "top-0 left-full ml-4";
-			case "left":
-				return "top-0 right-full mr-4";
 			case "top":
-				return "bottom-full left-[50%] translate-x-[-50%] -translate-y-2";
+				setPosition({ top: rect.top - 8, left: rect.left + rect.width / 2 });
+				break;
 			case "bottom":
-				return "top-full left-[50%] translate-x-[-50%] translate-y-2";
-			default:
-				return "";
+				setPosition({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+				break;
+			case "right":
+				setPosition({ top: rect.top + rect.height / 2, left: rect.right + 8 });
+				break;
+			case "left":
+				setPosition({ top: rect.top + rect.height / 2, left: rect.left - 8 });
+				break;
 		}
 	};
 
-	const setPointerPosition = (orientation: string) => {
+	useEffect(() => {
+		if (!visible) return;
+		updatePosition();
+		window.addEventListener("scroll", updatePosition, true);
+		window.addEventListener("resize", updatePosition);
+		return () => {
+			window.removeEventListener("scroll", updatePosition, true);
+			window.removeEventListener("resize", updatePosition);
+		};
+	}, [visible]);
+
+	const portalTarget = typeof document !== "undefined" ? document.body : null;
+
+	const getTooltipStyle = (): React.CSSProperties => {
 		switch (orientation) {
-			case "right":
-				return "left-[-6px]";
-			case "left":
-				return "right-[-6px]";
 			case "top":
-				return "top-full left-[50%] translate-x-[-50%] -translate-y-2";
+				return { top: position.top, left: position.left, transform: "translate(-50%, -100%)" };
 			case "bottom":
-				return "bottom-full left-[50%] translate-x-[-50%] translate-y-2";
-			default:
-				return "";
+				return { top: position.top, left: position.left, transform: "translate(-50%, 0)" };
+			case "right":
+				return { top: position.top, left: position.left, transform: "translate(0, -50%)" };
+			case "left":
+				return { top: position.top, left: position.left, transform: "translate(-100%, -50%)" };
 		}
 	};
 
-	const containerClasses = `w-max absolute z-50 ${setContainerPosition(
-		orientation
-	)} bg-[rgb(var(--group-theme))] text-white text-sm px-3 py-2 rounded-xl flex items-center transition-all duration-150 pointer-events-none`;
-
-	const pointerClasses = `bg-[rgb(var(--group-theme))] h-3 w-3 absolute z-10 ${setPointerPosition(
-		orientation
-	)} rotate-45 pointer-events-none`;
+	const arrowClasses: Record<string, string> = {
+		top: "absolute left-1/2 -translate-x-1/2 top-full -translate-y-1/2 rotate-45",
+		bottom: "absolute left-1/2 -translate-x-1/2 bottom-full translate-y-1/2 rotate-45",
+		right: "absolute right-full top-1/2 -translate-y-1/2 translate-x-1/2 rotate-45",
+		left: "absolute left-full top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-45",
+	};
 
 	return (
-		<div className="relative flex items-center" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-			<div className={containerClasses} style={{ opacity: 0 }} ref={tipRef}>
-				<div className={pointerClasses} />
-				{tooltipText}
-			</div>
+		<div
+			ref={anchorRef}
+			className="relative flex items-center"
+			onMouseEnter={() => { updatePosition(); setVisible(true); }}
+			onMouseLeave={() => setVisible(false)}
+		>
 			{children}
+			{visible && portalTarget && createPortal(
+				<div
+					className="fixed z-[9999] pointer-events-none"
+					style={getTooltipStyle()}
+					role="tooltip"
+				>
+					<div className="relative px-3 py-1.5 bg-[color:rgb(var(--group-theme))] text-white text-sm rounded-lg whitespace-nowrap shadow-lg">
+						<div className={`${arrowClasses[orientation]} w-2.5 h-2.5 bg-[color:rgb(var(--group-theme))]`} />
+						{tooltipText}
+					</div>
+				</div>,
+				portalTarget
+			)}
 		</div>
 	);
 };

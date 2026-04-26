@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ComponentType, useState, useEffect } from "react";
+import Tooltip from "@/components/tooltip";
 import {
   DndContext,
   closestCenter,
@@ -348,13 +349,14 @@ const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
                     </span>
                   )}
                   {section.canAdd && section.onAdd && (
-                    <button
-                      onClick={section.onAdd}
-                      className="p-1 rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
-                      title="Add new"
-                    >
-                      <IconPlus className="w-3.5 h-3.5" />
-                    </button>
+                    <Tooltip orientation="top" tooltipText="Add new">
+                      <button
+                        onClick={section.onAdd}
+                        className="p-1 rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+                      >
+                        <IconPlus className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
                   )}
                 </div>
               )}

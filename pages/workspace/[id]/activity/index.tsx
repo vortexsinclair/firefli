@@ -926,20 +926,20 @@ const Activity: pageWithLayout = () => {
                         </span>
                         <div className="flex flex-wrap gap-2">
                           {concurrentUsers.map((user: any) => (
-                            <div
-                              key={user.userId}
-                              className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
-                                user.userId,
-                                user.username
-                              )}`}
-                              title={user.username}
-                            >
-                              <img
-                                src={user.picture || "/default-avatar.jpg"}
-                                alt={user.username}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
+                            <Tooltip key={user.userId} orientation="top" tooltipText={user.username}>
+                              <div
+                                className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
+                                  user.userId,
+                                  user.username
+                                )}`}
+                              >
+                                <img
+                                  src={user.picture || "/default-avatar.jpg"}
+                                  alt={user.username}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            </Tooltip>
                           ))}
                         </div>
                       </div>

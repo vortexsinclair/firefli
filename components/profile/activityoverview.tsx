@@ -28,6 +28,7 @@ import { useRecoilValue } from "recoil";
 import { themeState } from "@/state/theme";
 import moment from "moment";
 import type { ActivitySession, inactivityNotice } from "@prisma/client";
+import Tooltip from "@/components/tooltip";
 
 ChartJS.register(
   CategoryScale,
@@ -574,19 +575,19 @@ export function ActivityOverview({
                         </span>
                         <div className="flex flex-wrap gap-2">
                           {concurrentUsers.map((user: any) => (
-                            <div
-                              key={user.userId}
-                              className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
-                                user.userId
-                              )}`}
-                              title={user.username}
-                            >
-                              <img
-                                src={user.picture || "/default-avatar.jpg"}
-                                alt={user.username}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
+                            <Tooltip key={user.userId} orientation="top" tooltipText={user.username}>
+                              <div
+                                className={`w-8 h-8 rounded-full overflow-hidden ring-2 ring-white dark:ring-zinc-800 ${getRandomBg(
+                                  user.userId
+                                )}`}
+                              >
+                                <img
+                                  src={user.picture || "/default-avatar.jpg"}
+                                  alt={user.username}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            </Tooltip>
                           ))}
                         </div>
                       </div>

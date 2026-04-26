@@ -13,11 +13,13 @@ import {
   IconPencil,
   IconChevronDown,
   IconRefresh,
+  IconCopy,
 } from "@tabler/icons-react";
 import axios from "axios";
 import { useRouter } from "next/router";
 import { Listbox, Transition, Combobox } from "@headlessui/react";
 import toast from "react-hot-toast";
+import Tooltip from "@/components/tooltip";
 import {
   getTimezoneOptions,
   parseTimezoneOffset,
@@ -293,13 +295,27 @@ export function InformationTab({
               <div className="p-2 bg-primary/10 rounded-lg">
                 <IconUser className="w-5 h-5 text-primary" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                   Username
                 </p>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                  {user.username}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {user.username}
+                  </p>
+                  <Tooltip orientation="top" tooltipText="Copy username">
+                    <button
+                      type="button"
+                      className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.username);
+                        toast.success("Copied to clipboard");
+                      }}
+                    >
+                      <IconCopy className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </div>
@@ -308,13 +324,27 @@ export function InformationTab({
               <div className="p-2 bg-blue-500/10 rounded-lg">
                 <IconId className="w-5 h-5 text-blue-500" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                   User ID
                 </p>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white font-mono">
-                  {user.userid}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white font-mono">
+                    {user.userid}
+                  </p>
+                  <Tooltip orientation="top" tooltipText="Copy user ID">
+                    <button
+                      type="button"
+                      className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.userid);
+                        toast.success("Copied to clipboard");
+                      }}
+                    >
+                      <IconCopy className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </div>
@@ -348,9 +378,24 @@ export function InformationTab({
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                    {workspaceMember?.discordId || "Not linked"}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      {workspaceMember?.discordId || "Not linked"}
+                    </p>
+                    {workspaceMember?.discordId && (
+                      <button
+                        type="button"
+                        title="Copy Discord ID"
+                        className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(workspaceMember.discordId!);
+                          toast.success("Copied to clipboard");
+                        }}
+                      >
+                        <IconCopy className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -518,7 +563,7 @@ export function InformationTab({
                                         </span>
                                       </div>
                                       {selected && (
-                                        <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#ff0099]">
+                                        <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-firefli">
                                           <IconCheck className="h-5 w-5" aria-hidden="true" />
                                         </span>
                                       )}

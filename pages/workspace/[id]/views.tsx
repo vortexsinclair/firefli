@@ -79,6 +79,7 @@ import {
 } from "@tabler/icons-react";
 import { UserGroupIcon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Tooltip from "@/components/tooltip";
 
 type User = {
   info: {
@@ -381,12 +382,13 @@ const Views: pageWithLayout<pageProps> = ({
                 style={{ background: "transparent" }}
               />
             </div>
-            <p
-              title={row.getValue().username || undefined}
-              className="leading-5 my-auto px-2 font-semibold dark:text-white truncate"
-            >
-              {row.getValue().username}
-            </p>
+            <Tooltip orientation="top" tooltipText={row.getValue().username || ""}>
+              <p
+                className="leading-5 my-auto px-2 font-semibold dark:text-white truncate"
+              >
+                {row.getValue().username}
+              </p>
+            </Tooltip>
             {(() => {
               const notices = row.row.original.inactivityNotices || [];
               const now = new Date();
@@ -440,21 +442,22 @@ const Views: pageWithLayout<pageProps> = ({
               }
               return null;
             })()}
-            <button
-              type="button"
-              title="Copy username"
-              className="ml-1 p-1 my-auto rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0 leading-none"
-              onClick={(e) => {
-                e.stopPropagation();
-                const username = row.getValue().username;
-                if (username) {
-                  navigator.clipboard.writeText(username);
-                  toast.success(`Copied to clipboard`);
-                }
-              }}
-            >
-              <IconCopy className="w-3.5 h-3.5" />
-            </button>
+            <Tooltip orientation="top" tooltipText="Copy username">
+              <button
+                type="button"
+                className="ml-1 p-1 my-auto rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0 leading-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const username = row.getValue().username;
+                  if (username) {
+                    navigator.clipboard.writeText(username);
+                    toast.success(`Copied to clipboard`);
+                  }
+                }}
+              >
+                <IconCopy className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
           </div>
         );
       },
@@ -2388,7 +2391,7 @@ const Views: pageWithLayout<pageProps> = ({
                       {hasCreateViews() ? (
                         <div>
                           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200 mb-2">
-                            View Type <span className="text-red-500">*</span>
+                            Type <span className="text-red-500">*</span>
                           </label>
                           <div className="flex gap-2">
                             <button
@@ -2460,7 +2463,7 @@ const Views: pageWithLayout<pageProps> = ({
 
                       <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200 mb-2">
-                          Color <span className="text-red-500">*</span>
+                          Colour <span className="text-red-500">*</span>
                         </label>
                         <div className="flex flex-wrap gap-2">
                           {[
@@ -2489,7 +2492,6 @@ const Views: pageWithLayout<pageProps> = ({
                               key={c}
                               type="button"
                               onClick={() => setSaveColor(c)}
-                              title={c}
                               className={`w-8 h-8 rounded-md border dark:border-zinc-600 ${
                                 saveColor === c
                                   ? "ring-2 ring-offset-1 ring-[color:rgb(var(--group-theme))] dark:ring-white/30"
@@ -2512,7 +2514,6 @@ const Views: pageWithLayout<pageProps> = ({
                                   key={opt.key}
                                   type="button"
                                   onClick={() => setSaveIcon(opt.key)}
-                                  title={opt.title || opt.key}
                                   className={`w-9 h-9 rounded-md flex items-center justify-center text-lg border dark:border-zinc-600 ${
                                     saveIcon === opt.key
                                       ? "ring-2 ring-offset-1 ring-[color:rgb(var(--group-theme))] dark:ring-white/30"
