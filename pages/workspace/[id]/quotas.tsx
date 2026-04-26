@@ -720,7 +720,7 @@ const Quotas: pageWithLayout<pageProps> = ({
                       No Quotas Assigned
                     </h3>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                      You don't have any activity quotas assigned to your roles yet
+                      You don't have any activity quotas assigned to you yet
                     </p>
                   </div>
                 </div>
