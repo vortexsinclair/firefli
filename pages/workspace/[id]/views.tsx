@@ -371,24 +371,24 @@ const Views: pageWithLayout<pageProps> = ({
               }
             }}
           >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getRandomBg(
-                row.getValue().userId.toString(),
-              )}`}
-            >
-              <img
-                src={row.getValue().picture!}
-                className="w-10 h-10 rounded-full object-cover border-2 border-white"
-                style={{ background: "transparent" }}
-              />
-            </div>
             <Tooltip orientation="top" tooltipText={row.getValue().username || ""}>
-              <p
-                className="leading-5 my-auto px-2 font-semibold dark:text-white truncate"
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getRandomBg(
+                  row.getValue().userId.toString(),
+                )}`}
               >
-                {row.getValue().username}
-              </p>
+                <img
+                  src={row.getValue().picture!}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                  style={{ background: "transparent" }}
+                />
+              </div>
             </Tooltip>
+            <p
+              className="leading-5 my-auto px-2 font-semibold dark:text-white truncate"
+            >
+              {row.getValue().username}
+            </p>
             {(() => {
               const notices = row.row.original.inactivityNotices || [];
               const now = new Date();
@@ -408,7 +408,6 @@ const Views: pageWithLayout<pageProps> = ({
                 return (
                   <div
                     className="flex-shrink-0 my-auto"
-                    title={`On notice: ${active.reason || "N/A"}`}
                   >
                     <IconBeach className="w-4 h-4 text-amber-500" />
                   </div>
@@ -421,7 +420,6 @@ const Views: pageWithLayout<pageProps> = ({
                 return (
                   <div
                     className="flex-shrink-0 my-auto"
-                    title={`Upcoming notice (starts ${new Date(upcoming.startTime).toLocaleDateString()})`}
                   >
                     <IconBeach className="w-4 h-4 text-emerald-500" />
                   </div>
@@ -434,7 +432,6 @@ const Views: pageWithLayout<pageProps> = ({
                 return (
                   <div
                     className="flex-shrink-0 my-auto"
-                    title={`Previous notice (ended ${new Date(past.endTime!).toLocaleDateString()})`}
                   >
                     <IconBeach className="w-4 h-4 text-zinc-400" />
                   </div>
@@ -741,8 +738,11 @@ const Views: pageWithLayout<pageProps> = ({
   }, [router.query.view, savedViews, localViews]);
 
   useEffect(() => {
-    if (router.query.newView === "true") {
-      openSaveDialog();
+    if (router.query.newView) {
+      const typeHint =
+        router.query.newView === "local" ? "local" :
+        router.query.newView === "team" ? "team" : undefined;
+      openSaveDialog(typeHint);
       router.replace(`/workspace/${router.query.id}/views`, undefined, {
         shallow: true,
       });
@@ -862,11 +862,11 @@ const Views: pageWithLayout<pageProps> = ({
     setOriginalViewConfig(null);
   };
 
-  const openSaveDialog = () => {
+  const openSaveDialog = (typeHint?: "team" | "local") => {
     setSaveName("");
     setSaveColor("");
     setSaveIcon("");
-    setSaveType(hasCreateViews() ? "team" : "local");
+    setSaveType(typeHint ?? (hasCreateViews() ? "team" : "local"));
     setIsSaveOpen(true);
   };
 
@@ -894,12 +894,18 @@ const Views: pageWithLayout<pageProps> = ({
         payload,
       );
       if (res.data && res.data.view) {
+        const newView = res.data.view;
         if (isLocal) {
-          setLocalViews((prev) => [...prev, res.data.view]);
+          setLocalViews((prev) => [...prev, newView]);
         } else {
-          setSavedViews((prev) => [...prev, res.data.view]);
+          setSavedViews((prev) => [...prev, newView]);
         }
         window.dispatchEvent(new CustomEvent("savedViewsChanged"));
+        router.push(
+          { pathname: router.pathname, query: { ...router.query, view: newView.id, page: 0 } },
+          undefined,
+          { shallow: true },
+        );
       }
       setIsSaveOpen(false);
       toast.success(isLocal ? "Local view created!" : "Team view created!");
@@ -1022,6 +1028,9 @@ const Views: pageWithLayout<pageProps> = ({
       } catch (e) {
         toast.error("Failed to update view.");
       }
+    } else if (isEditMode) {
+      const view = [...savedViews, ...localViews].find((v) => v.id === selectedViewId);
+      if (view) applySavedView(view);
     } else {
       setIsEditMode(true);
     }
@@ -1240,7 +1249,7 @@ const Views: pageWithLayout<pageProps> = ({
                 </span>
                 {hasCreateViews() && (
                   <button
-                    onClick={openSaveDialog}
+                    onClick={() => openSaveDialog()}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-all"
                   >
                     <IconPlus className="w-3 h-3" />
@@ -1368,7 +1377,7 @@ const Views: pageWithLayout<pageProps> = ({
                     </h4>
                     {hasCreateViews() && (
                       <button
-                        onClick={openSaveDialog}
+                        onClick={() => openSaveDialog()}
                         className="p-1.5 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
                       >
                         <IconPlus className="w-4 h-4" />
@@ -1422,17 +1431,18 @@ const Views: pageWithLayout<pageProps> = ({
 
                         <div className="flex items-center gap-1">
                           {hasDeleteViews() && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewToDelete(v.id);
-                                setShowDeleteModal(true);
-                              }}
-                              className="p-1.5 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
-                              title="Delete View"
-                            >
-                              <IconX className="w-4 h-4" />
-                            </button>
+                            <Tooltip orientation="top" tooltipText="Delete view">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewToDelete(v.id);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="p-1.5 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
+                              >
+                                <IconX className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
                           )}
                         </div>
                       </div>
@@ -1562,28 +1572,30 @@ const Views: pageWithLayout<pageProps> = ({
                   </Popover>
 
                   <div className="hidden md:flex gap-1 border border-zinc-200 dark:border-zinc-600 rounded-lg p-0.5 bg-zinc-50 dark:bg-zinc-700/50">
-                    <button
-                      onClick={() => handleLayoutChange("list")}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md transition-all ${
-                        viewLayout === "list"
-                          ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
-                          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                      title="List view"
-                    >
-                      <IconLayoutList className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleLayoutChange("card")}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md transition-all ${
-                        viewLayout === "card"
-                          ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
-                          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                      title="Card view"
-                    >
-                      <IconLayoutGrid className="w-4 h-4" />
-                    </button>
+                    <Tooltip orientation="top" tooltipText="List view">
+                      <button
+                        onClick={() => handleLayoutChange("list")}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md transition-all ${
+                          viewLayout === "list"
+                            ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                        }`}
+                      >
+                        <IconLayoutList className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip orientation="top" tooltipText="Card view">
+                      <button
+                        onClick={() => handleLayoutChange("card")}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md transition-all ${
+                          viewLayout === "card"
+                            ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                        }`}
+                      >
+                        <IconLayoutGrid className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -1679,13 +1691,26 @@ const Views: pageWithLayout<pageProps> = ({
                     localViews.some((v) => v.id === selectedViewId)) && (
                     <button
                       onClick={handleEditOrSaveView}
-                      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-all bg-zinc-50 dark:bg-zinc-700/50 border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                      className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-all ${
+                        isEditMode
+                          ? hasUnsavedChanges()
+                            ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                            : "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                          : "bg-zinc-50 dark:bg-zinc-700/50 border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
                     >
-                      {hasUnsavedChanges() ? (
-                        <>
-                          <IconDeviceFloppy className="w-4 h-4" />
-                          <span>Save</span>
-                        </>
+                      {isEditMode ? (
+                        hasUnsavedChanges() ? (
+                          <>
+                            <IconDeviceFloppy className="w-4 h-4" />
+                            <span>Save</span>
+                          </>
+                        ) : (
+                          <>
+                            <IconX className="w-4 h-4" />
+                            <span>Cancel</span>
+                          </>
+                        )
                       ) : (
                         <>
                           <IconPencil className="w-4 h-4" />
@@ -1812,6 +1837,72 @@ const Views: pageWithLayout<pageProps> = ({
                               </p>
                             </div>
                           </div>
+                          {(() => {
+                            const notices = user.inactivityNotices || [];
+                            const now = new Date();
+                            const approved = notices.filter(
+                              (n: any) =>
+                                n.approved === true &&
+                                n.reviewed === true &&
+                                n.revoked === false,
+                            );
+                            const active = approved.find(
+                              (n: any) =>
+                                n.endTime &&
+                                new Date(n.startTime) <= now &&
+                                new Date(n.endTime) >= now,
+                            );
+                            if (active) {
+                              return (
+                                <div
+                                  className="flex-shrink-0 my-auto"
+                                >
+                                  <IconBeach className="w-4 h-4 text-amber-500" />
+                                </div>
+                              );
+                            }
+                            const upcoming = approved.find(
+                              (n: any) => new Date(n.startTime) > now,
+                            );
+                            if (upcoming) {
+                              return (
+                                <div
+                                  className="flex-shrink-0 my-auto"
+                                >
+                                  <IconBeach className="w-4 h-4 text-emerald-500" />
+                                </div>
+                              );
+                            }
+                            const past = approved.find(
+                              (n: any) => n.endTime && new Date(n.endTime) < now,
+                            );
+                            if (past) {
+                              return (
+                                <div
+                                  className="flex-shrink-0 my-auto"
+                                >
+                                  <IconBeach className="w-4 h-4 text-zinc-400" />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          <Tooltip orientation="top" tooltipText="Copy username">
+                            <button
+                              type="button"
+                              className="hidden md:flex p-1 my-auto rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0 leading-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const username = user.info.username;
+                                if (username) {
+                                  navigator.clipboard.writeText(username);
+                                  toast.success(`Copied to clipboard`);
+                                }
+                              }}
+                            >
+                              <IconCopy className="w-3.5 h-3.5" />
+                            </button>
+                          </Tooltip>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
@@ -2372,7 +2463,7 @@ const Views: pageWithLayout<pageProps> = ({
                   leaveFrom="opacity-100 scale-100"
                   leaveTo="opacity-0 scale-95"
                 >
-                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 p-5 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Panel className="w-full max-w-md transform overflow-y-auto rounded-none sm:rounded-2xl bg-white dark:bg-zinc-800 p-5 text-left shadow-xl transition-all fixed top-12 bottom-16 left-0 right-0 sm:relative sm:inset-auto sm:h-auto sm:max-h-[85vh]">
                     <Dialog.Title
                       as="div"
                       className="flex items-center justify-between mb-3"
@@ -2491,7 +2582,7 @@ const Views: pageWithLayout<pageProps> = ({
                             <button
                               key={c}
                               type="button"
-                              onClick={() => setSaveColor(c)}
+                              onMouseDown={(e) => { e.preventDefault(); setSaveColor(c); }}
                               className={`w-8 h-8 rounded-md border dark:border-zinc-600 ${
                                 saveColor === c
                                   ? "ring-2 ring-offset-1 ring-[color:rgb(var(--group-theme))] dark:ring-white/30"
@@ -2513,7 +2604,7 @@ const Views: pageWithLayout<pageProps> = ({
                                 <button
                                   key={opt.key}
                                   type="button"
-                                  onClick={() => setSaveIcon(opt.key)}
+                                  onMouseDown={(e) => { e.preventDefault(); setSaveIcon(opt.key); }}
                                   className={`w-9 h-9 rounded-md flex items-center justify-center text-lg border dark:border-zinc-600 ${
                                     saveIcon === opt.key
                                       ? "ring-2 ring-offset-1 ring-[color:rgb(var(--group-theme))] dark:ring-white/30"

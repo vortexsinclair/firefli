@@ -503,7 +503,7 @@ const workspace: LayoutProps = ({ children }) => {
 					icon: UserGroupIcon,
 					canAdd: hasCreateViewsPermission,
 					onAdd: hasCreateViewsPermission ? () => {
-						router.push(`/workspace/${id}/views?newView=true`);
+					router.push(`/workspace/${id}/views?newView=team`);
 					} : undefined,
 					items: teamViewItems,
 					draggable: hasEditViewsPermission,
@@ -515,7 +515,7 @@ const workspace: LayoutProps = ({ children }) => {
 				icon: UserMultiple02Icon,
 				canAdd: true,
 				onAdd: () => {
-					router.push(`/workspace/${id}/views?newView=true`);
+					router.push(`/workspace/${id}/views?newView=local`);
 				},
 				items: localViewItems,
 				draggable: true,
