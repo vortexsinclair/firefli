@@ -1183,8 +1183,8 @@ const Notices: pageWithLayout<NoticesPageProps> = ({
                 upcomingNotices.length === 0 &&
                 activeNotices.length === 0 &&
                 revokedNotices.length === 0 && (
-                  <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm p-12 text-center">
-                    <div className="mx-auto w-16 h-16 bg-zinc-100 dark:bg-zinc-700 rounded-full flex items-center justify-center mb-4">
+                  <div className="rounded-xl shadow-sm p-12 text-center">
+                    <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4">
                       <IconCalendarTime className="w-8 h-8 text-zinc-400" />
                     </div>
                     <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">

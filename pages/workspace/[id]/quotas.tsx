@@ -943,15 +943,6 @@ const Quotas: pageWithLayout<pageProps> = ({
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                       {canManageQuotas ? "You haven't set up any activity quotas yet." : "Your workspace admin has not set up any activity quotas yet."}
                     </p>
-                    {canManageQuotas && (
-                      <button
-                        onClick={() => setIsOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-                      >
-                        <IconPlus className="w-4 h-4" />
-                        <span className="text-sm font-medium">Create Quota</span>
-                      </button>
-                    )}
                   </div>
                 </div>
               ) : (
