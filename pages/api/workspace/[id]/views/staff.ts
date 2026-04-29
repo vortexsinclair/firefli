@@ -121,7 +121,7 @@ export default withPermissionCheck(
         allUsers = await prisma.user.findMany({
           where: whereClause,
           include: {
-            book: needsBook,
+            book: needsBook ? { where: { workspaceGroupId, NOT: { redacted: true } } } : false,
             wallPosts: needsWallPosts,
             inactivityNotices: needsInactivityNotices,
             sessions: needsSessions,
@@ -175,7 +175,7 @@ export default withPermissionCheck(
           skip: page * pageSize,
           take: pageSize,
           include: {
-            book: needsBook,
+            book: needsBook ? { where: { workspaceGroupId, NOT: { redacted: true } } } : false,
             wallPosts: needsWallPosts,
             inactivityNotices: needsInactivityNotices,
             sessions: needsSessions,
@@ -629,7 +629,7 @@ export default withPermissionCheck(
                 break;
               case "warnings":
                 value = Array.isArray(user.book)
-                  ? user.book.filter((b: any) => b.type === "warning").length
+                  ? user.book.filter((b: any) => b.type === "warning" && !b.redacted).length
                   : 0;
                 break;
               case "messages":

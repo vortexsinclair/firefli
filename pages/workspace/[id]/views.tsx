@@ -546,7 +546,7 @@ const Views: pageWithLayout<pageProps> = ({
       cell: (row) => {
         const book = row.getValue() as any[];
         const warnings = Array.isArray(book)
-          ? book.filter((b) => b.type === "warning").length
+          ? book.filter((b) => b.type === "warning" && !b.redacted).length
           : 0;
         return <p className="dark:text-white">{warnings}</p>;
       },
@@ -1777,7 +1777,7 @@ const Views: pageWithLayout<pageProps> = ({
                   {table.getRowModel().rows.map((row) => {
                     const user = row.original;
                     const warnings = Array.isArray(user.book)
-                      ? user.book.filter((b: any) => b.type === "warning")
+                      ? user.book.filter((b: any) => b.type === "warning" && !b.redacted)
                           .length
                       : 0;
                     const hosted = user.hostedSessions as any;
