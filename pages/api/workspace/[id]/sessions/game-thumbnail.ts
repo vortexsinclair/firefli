@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { withSessionRoute } from "@/lib/withSession";
 import axios from "axios";
-import fs from "fs";
-import path from "path";
+import prisma from "@/utils/database";
 
-const CACHE_DIR = path.join(process.cwd(), "public", "places");
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 type Data = {
@@ -25,16 +23,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   if (!placeId || !/^\d+$/.test(placeId))
     return res.status(400).json({ success: false, error: "Invalid placeId" });
 
-  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+  const cached = await (prisma as any).thumbnails.findUnique({
+    where: { placeId: BigInt(placeId) },
+  }).catch(() => null);
 
-  const cacheFile = path.join(CACHE_DIR, `${placeId}.png`);
-  const publicUrl = `/places/${placeId}.png`;
-  if (fs.existsSync(cacheFile)) {
-    const { mtimeMs } = fs.statSync(cacheFile);
-    if (Date.now() - mtimeMs < CACHE_TTL_MS) {
-      res.setHeader("Cache-Control", "public, max-age=3600");
-      return res.status(200).json({ success: true, thumbnailUrl: publicUrl });
-    }
+  if (cached && Date.now() - new Date(cached.updatedAt).getTime() < CACHE_TTL_MS) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.status(200).json({ success: true, thumbnailUrl: cached.imageUrl });
   }
 
   const noThrow = { timeout: 8000, validateStatus: () => true };
@@ -51,34 +46,36 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
   try {
     let robloxUrl: string | undefined;
+    let resolvedUniverseId: number | undefined;
     robloxUrl = await getThumbnailByUniverseId(placeId);
+    if (robloxUrl) resolvedUniverseId = Number(placeId);
     if (!robloxUrl) {
       const universeRes = await axios.get(
         `https://apis.roblox.com/universes/v1/places/${placeId}/universe`,
         noThrow
       );
-      const universeId: number | undefined = universeRes.data?.universeId;
-      if (universeId) robloxUrl = await getThumbnailByUniverseId(universeId);
+      resolvedUniverseId = universeRes.data?.universeId;
+      if (resolvedUniverseId) robloxUrl = await getThumbnailByUniverseId(resolvedUniverseId);
     }
 
     if (!robloxUrl) {
-      if (fs.existsSync(cacheFile)) {
-        return res.status(200).json({ success: true, thumbnailUrl: publicUrl });
+      if (cached?.imageUrl) {
+        return res.status(200).json({ success: true, thumbnailUrl: cached.imageUrl });
       }
       return res.status(404).json({ success: false, error: "Thumbnail not found" });
     }
 
-    const imgRes = await axios.get<ArrayBuffer>(robloxUrl, {
-      responseType: "arraybuffer",
-      timeout: 8000,
-    });
-    fs.writeFileSync(cacheFile, Buffer.from(imgRes.data));
+    (prisma as any).thumbnails.upsert({
+      where: { placeId: BigInt(placeId) },
+      update: { universeId: resolvedUniverseId ? BigInt(resolvedUniverseId) : null, imageUrl: robloxUrl, updatedAt: new Date() },
+      create: { placeId: BigInt(placeId), universeId: resolvedUniverseId ? BigInt(resolvedUniverseId) : null, imageUrl: robloxUrl },
+    }).catch(() => {});
 
     res.setHeader("Cache-Control", "public, max-age=3600");
-    return res.status(200).json({ success: true, thumbnailUrl: publicUrl });
+    return res.status(200).json({ success: true, thumbnailUrl: robloxUrl });
   } catch {
-    if (fs.existsSync(cacheFile)) {
-      return res.status(200).json({ success: true, thumbnailUrl: publicUrl });
+    if (cached?.imageUrl) {
+      return res.status(200).json({ success: true, thumbnailUrl: cached.imageUrl });
     }
     return res.status(502).json({ success: false, error: "Failed to fetch thumbnail" });
   }
