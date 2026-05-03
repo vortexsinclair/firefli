@@ -20,11 +20,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   if (!placeId || !/^\d+$/.test(placeId))
     return res.status(400).json({ success: false, error: "Invalid placeId" });
 
+  const noThrow = { timeout: 8000, validateStatus: () => true };
+
   try {
-    let universeId: number | null = null;
     const directThumbRes = await axios.get(
       `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${placeId}&size=768x432&format=Png&isCircular=false`,
-      { timeout: 5000 }
+      noThrow
     );
     const directUrl = directThumbRes.data?.data?.[0]?.thumbnails?.[0]?.imageUrl;
     if (directUrl) {
@@ -34,17 +35,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
     const placeDetailsRes = await axios.get(
       `https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeId}`,
-      { timeout: 5000 }
+      noThrow
     );
-    universeId = placeDetailsRes.data?.[0]?.universeId ?? null;
+    const universeId: number | undefined = placeDetailsRes.data?.[0]?.universeId;
     if (!universeId)
       return res.status(404).json({ success: false, error: "Universe not found" });
 
     const thumbRes = await axios.get(
       `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${universeId}&size=768x432&format=Png&isCircular=false`,
-      { timeout: 5000 }
+      noThrow
     );
-    const thumbnailUrl = thumbRes.data?.data?.[0]?.thumbnails?.[0]?.imageUrl;
+    const thumbnailUrl: string | undefined = thumbRes.data?.data?.[0]?.thumbnails?.[0]?.imageUrl;
     if (!thumbnailUrl)
       return res.status(404).json({ success: false, error: "Thumbnail not found" });
 
