@@ -115,8 +115,10 @@ export async function handler(
 			);
 
 			const totalRequired = requiredUsers.size;
-			const totalAcknowledged = currentVersionAcknowledgments.length;
-			const complianceRate = totalRequired > 0 ? (totalAcknowledged / totalRequired) * 100 : 100;
+			const totalAcknowledged = currentVersionAcknowledgments.filter(
+				ack => requiredUsers.has(ack.userId.toString())
+			).length;
+			const complianceRate = totalRequired > 0 ? Math.min((totalAcknowledged / totalRequired) * 100, 100) : 100;
 
 			const acknowledgedUserIds = new Set(
 				currentVersionAcknowledgments.map(ack => ack.userId.toString())

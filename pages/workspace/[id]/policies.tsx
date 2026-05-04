@@ -351,6 +351,9 @@ const PoliciesPage: pageWithLayout<pageProps> = ({
   const [memberRoleCounts, setMemberRoleCounts] = useState<{
     [roleId: string]: number;
   }>({});
+  const [policyAcknowledgedCounts, setPolicyAcknowledgedCounts] = useState<{
+    [policyId: string]: number;
+  }>({});
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const fetchComplianceData = async () => {
@@ -382,10 +385,13 @@ const PoliciesPage: pageWithLayout<pageProps> = ({
           const roleCounts: { [roleId: string]: number } = {};
           response.data.stats.memberCompliance.forEach((member: any) => {});
           const policyRequiredCounts: { [policyId: string]: number } = {};
+          const policyAcknowledgedMap: { [policyId: string]: number } = {};
           response.data.stats.policyBreakdown.forEach((policy: any) => {
             policyRequiredCounts[policy.id] = policy.totalRequired;
+            policyAcknowledgedMap[policy.id] = policy.totalAcknowledged;
           });
           setMemberRoleCounts(policyRequiredCounts);
+          setPolicyAcknowledgedCounts(policyAcknowledgedMap);
         }
       } catch (error) {
         console.error("Failed to fetch role counts:", error);
@@ -646,9 +652,8 @@ const PoliciesPage: pageWithLayout<pageProps> = ({
   };
 
   const calculatePolicyStats = (doc: any) => {
-    const currentVersionAcks = doc.acknowledgments;
     const totalRequired = memberRoleCounts[doc.id] || 0;
-    const acknowledged = Math.min(currentVersionAcks.length, totalRequired);
+    const acknowledged = policyAcknowledgedCounts[doc.id] ?? Math.min(doc.acknowledgments.length, totalRequired);
     const complianceRate =
       totalRequired > 0 ? Math.min((acknowledged / totalRequired) * 100, 100) : 100;
 
