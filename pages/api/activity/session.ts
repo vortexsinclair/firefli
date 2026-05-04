@@ -6,7 +6,7 @@ import * as noblox from "noblox.js";
 import { getUsername, getThumbnail } from "@/utils/userinfoEngine";
 import { checkSpecificUser } from "@/utils/permissionsManager";
 import { generateSessionTimeMessage } from "@/utils/sessionMessage";
-import { sendSessionReviewNotification } from "@/utils/session-review-notification";
+import { sendSessionReviewNotification } from "@/utils/sessiondm";
 
 type Data = {
   success: boolean;

@@ -6,7 +6,6 @@ import * as noblox from "noblox.js";
 import { getUsername, getThumbnail } from "@/utils/userinfoEngine";
 import { checkSpecificUser } from "@/utils/permissionsManager";
 import { generateSessionTimeMessage } from "@/utils/sessionMessage";
-import { sendSessionReviewNotification } from "@/utils/session-review-notification";
 
 type Data = {
   success: boolean;
@@ -171,17 +170,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
                 });
               }
 
-              sendSessionReviewNotification({
-                sessionId: recentSession.id,
-                userId: BigInt(userid),
-                startTime: recentSession.startTime,
-                endTime: recentSession.endTime!,
-                idleTime: sessionIdleTime,
-                messages: sessionMessages,
-                sessionMessage: recentSession.sessionMessage,
-                workspaceGroupId: groupId,
-              }).catch((err) => console.error("[SessionReview] Error:", err));
-
               ended++;
               continue;
             }
@@ -204,17 +192,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
               messages: sessionMessages,
             },
           });
-
-          sendSessionReviewNotification({
-            sessionId: session.id,
-            userId: BigInt(userid),
-            startTime: session.startTime,
-            endTime: sessionEndTime,
-            idleTime: sessionIdleTime,
-            messages: sessionMessages,
-            sessionMessage: session.sessionMessage,
-            workspaceGroupId: groupId,
-          }).catch((err) => console.error("[SessionReview] Error:", err));
 
           console.log(`[SESSION ENDED] User ${userid} (ID: ${session.id})`);
           ended++;

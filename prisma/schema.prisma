@@ -353,9 +353,6 @@ model Session {
   scheduleId       String?       @db.Uuid
   sessionTagId     String?       @db.Uuid
   duration         Int           @default(30)
-  discordMessageId   String?
-  discordChannelId   String?
-  lastDiscordStatus  String?
   archiveEndDate   DateTime?
   archiveStartDate DateTime?
   archived         Boolean?      @default(false)
@@ -788,35 +785,6 @@ model DiscordIntegration {
   birthdayEmbedTitle        String?
   birthdayEmbedColor        String?
   birthdayEmbedDescription  String?
-
-  sessionChannelId          String?
-  sessionChannelName        String?
-  sessionNotifyOnCreate     Boolean   @default(false)
-  sessionNotifyOnClaim      Boolean   @default(false)
-  sessionNotifyOnStart      Boolean   @default(false)
-  sessionEmbedTitle         String?
-  sessionEmbedColor         String?
-  sessionEmbedDescription   String?
-  sessionEmbedFooter        String?
-  sessionCreateEmbedTitle   String?
-  sessionCreateEmbedColor   String?
-  sessionCreateEmbedDescription String?
-  sessionCreateEmbedFooter  String?
-  sessionClaimEmbedTitle    String?
-  sessionClaimEmbedColor    String?
-  sessionClaimEmbedDescription String?
-  sessionClaimEmbedFooter   String?
-  sessionStartEmbedTitle    String?
-  sessionStartEmbedColor    String?
-  sessionStartEmbedDescription String?
-  sessionStartEmbedFooter   String?
-  sessionReviewEmbedTitle       String?
-  sessionReviewEmbedColor       String?
-  sessionReviewEmbedDescription String?
-  sessionReviewEmbedFooter      String?
-  sessionPingRoleId         String?
-  sessionPingRoleName       String?
-  pingRoles                 Json?
 
   isActive         Boolean   @default(true)
   lastMessageAt    DateTime?

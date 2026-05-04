@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
 import { withSessionRoute } from "@/lib/withSession";
-import { sendSessionNotification } from "@/utils/session-notification";
 
 const sessionCreationLimits: { [key: string]: { count: number; resetTime: number } } = {};
 function checkSessionCreationRateLimit(req: NextApiRequest, res: NextApiResponse): boolean {
@@ -163,16 +162,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       const { logAudit } = await import('@/utils/logs');
       await logAudit(Number(req.query.id), Number(req.session.userid), 'session.create.unscheduled', `session:${session.id}`, { id: session.id, sessionType: sessionType.name });
     } catch (e) {}
-
-    sendSessionNotification(workspaceId, 'create', {
-      id: session.id,
-      name,
-      type,
-      date: sessionDate,
-      duration: session.duration,
-      hostUserId: null,
-      sessionTypeName: sessionType.name,
-    }).catch(() => {});
 
     res.status(200).json({
       success: true,
