@@ -609,6 +609,7 @@ const Home: pageWithLayout<pageProps> = (props) => {
   const [isPatternEditDialogOpen, setIsPatternEditDialogOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const router = useRouter();
   const workspaceIdForColors = Array.isArray(router.query.id)
     ? router.query.id[0]
@@ -632,7 +633,8 @@ const Home: pageWithLayout<pageProps> = (props) => {
   const selectedDateSessions = allSessions
     .filter(
       (s: any) =>
-        new Date(s.date).toDateString() === selectedDate.toDateString()
+        new Date(s.date).toDateString() === selectedDate.toDateString() &&
+        (selectedTypes.size === 0 || selectedTypes.has(s.type || "other"))
     )
     .sort(
       (a: any, b: any) =>
@@ -957,6 +959,36 @@ const Home: pageWithLayout<pageProps> = (props) => {
               >
                 {showHistory ? "Hide History" : "Show History"}
               </button>
+              <div className="flex items-center gap-1 flex-wrap">
+                {(["shift", "training", "event", "other"] as const).map((type) => {
+                  const tagColor = getSessionTypeColor(type);
+                  const tagTextColor = getTextColorForBackground(tagColor);
+                  const isActive = selectedTypes.has(type);
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setSelectedTypes((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(type)) {
+                            next.delete(type);
+                          } else {
+                            next.add(type);
+                          }
+                          return next;
+                        });
+                      }}
+                      className={`inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        isActive
+                          ? `${tagColor} ${tagTextColor}`
+                          : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 opacity-60"
+                      }`}
+                    >
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div>
