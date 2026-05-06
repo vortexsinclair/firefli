@@ -204,9 +204,25 @@ export class RobloxCloudRankingAPI {
     this.groupId = groupId;
   }
 
-  async setUserRole(userId: number, roleId: number): Promise<RankingResponse> {
+  private normaliseRoleId(roleId: string | number): number {
+    const parsed = Number(roleId);
+
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      throw new Error(`Invalid Roblox role ID: ${roleId}`);
+    }
+
+    return parsed;
+  }
+
+  async setUserRole(userId: number, robloxRoleId: string | number): Promise<RankingResponse> {
     try {
-      const url = `${OPENCLOUD}/groups/${this.groupId}/memberships/${userId}`;
+      const resolvedRoleId = this.normaliseRoleId(robloxRoleId);
+      const currentMembership = await this.getUserMembership(userId);
+      if (currentMembership && currentMembership.roleId === resolvedRoleId) {
+        return { success: false, error: "User is already at this role" };
+      }
+
+      const url = `${OPENCLOUD}/groups/${this.groupId}/memberships/${userId}?updateMask=role`;
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
@@ -214,21 +230,34 @@ export class RobloxCloudRankingAPI {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          role: `groups/${this.groupId}/roles/${roleId}`,
+          role: `groups/${this.groupId}/roles/${resolvedRoleId}`,
         }),
       });
+
       if (!response.ok) {
         const body = await response.text();
         let errorMessage = `Failed to update role (${response.status})`;
+
         try {
           const parsed = JSON.parse(body);
           errorMessage = parsed.message || parsed.error || errorMessage;
-        } catch {}
+          console.error(`Roblox API error for user ${userId} -> role ${resolvedRoleId}:`, parsed);
+        } catch {
+          console.error(`Roblox API error body:`, body);
+        }
+
         return { success: false, error: errorMessage };
       }
+
+      await delay(1000);
+
       return { success: true, message: "Role updated successfully" };
     } catch (error: any) {
-      return { success: false, error: error.message || "Open Cloud ranking request failed" };
+      console.error("setUserRole exception:", error);
+      return {
+        success: false,
+        error: error.message || "Open Cloud ranking request failed",
+      };
     }
   }
 
@@ -236,95 +265,159 @@ export class RobloxCloudRankingAPI {
     const response = await fetch(
       `https://groups.roblox.com/v1/groups/${this.groupId}/roles`
     );
+
     if (!response.ok) {
       throw new Error(`Failed to fetch group roles: ${response.status}`);
     }
+
     const data = await response.json();
+
     return (data.roles || [])
-      .map((r: any) => ({ id: r.id, name: r.name, rank: r.rank }))
+      .map((r: any) => ({
+        id: Number(r.id),
+        name: r.name,
+        rank: Number(r.rank),
+      }))
+      .filter((r: any) => Number.isSafeInteger(r.id) && Number.isSafeInteger(r.rank))
       .sort((a: any, b: any) => a.rank - b.rank);
   }
 
-  async getUserMembership(userId: number): Promise<{ roleId: number; rank: number } | null> {
-    try {
-      const url = `${OPENCLOUD}/groups/${this.groupId}/memberships?filter=user == 'users/${userId}'&maxPageSize=1`;
-      const response = await fetch(url, {
-        headers: { "x-api-key": this.apiKey },
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      if (!data.groupMemberships?.length) return null;
-      const membership = data.groupMemberships[0];
-      const roleIdMatch = membership.role?.match(/roles\/(\d+)/);
-      if (!roleIdMatch) return null;
-      const roleId = parseInt(roleIdMatch[1]);
-      const roles = await this.getGroupRoles();
-      const role = roles.find(r => r.id === roleId);
-      return { roleId, rank: role?.rank || 0 };
-    } catch {
-      return null;
+  async getUserMembership(
+    userId: number
+  ): Promise<{ roleId: number; rank: number } | null> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch(
+          `https://groups.roblox.com/v1/users/${userId}/groups/roles`
+        );
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+
+        const groupEntry = (data.data || []).find(
+          (g: any) => Number(g.group?.id) === this.groupId
+        );
+
+        if (!groupEntry?.role) return null;
+
+        return {
+          roleId: Number(groupEntry.role.id),
+          rank: Number(groupEntry.role.rank),
+        };
+      } catch {
+        if (attempt < 2) {
+          await delay(1000);
+          continue;
+        }
+
+        return null;
+      }
     }
+
+    return null;
   }
 
-  async promoteUser(userId: number): Promise<RankingResponse> {
-    try {
-      const [membership, roles] = await Promise.all([
-        this.getUserMembership(userId),
-        this.getGroupRoles(),
-      ]);
-      if (!membership) return { success: false, error: "User is not in the group" };
-      const currentIdx = roles.findIndex(r => r.rank === membership.rank);
-      if (currentIdx === -1 || currentIdx >= roles.length - 1) {
-        return { success: false, error: "User is already at the highest rank" };
-      }
-      const nextRole = roles[currentIdx + 1];
-      return this.setUserRole(userId, nextRole.id);
-    } catch (error: any) {
-      return { success: false, error: error.message || "Promotion failed" };
-    }
-  }
+	async promoteUser(userId: number): Promise<RankingResponse> {
+	try {
+		const [membership, allRoles] = await Promise.all([
+		this.getUserMembership(userId),
+		this.getGroupRoles(),
+		]);
 
-  async demoteUser(userId: number): Promise<RankingResponse> {
-    try {
-      const [membership, roles] = await Promise.all([
-        this.getUserMembership(userId),
-        this.getGroupRoles(),
-      ]);
-      if (!membership) return { success: false, error: "User is not in the group" };
-      const nonGuestRoles = roles.filter(r => r.rank > 0);
-      const currentIdx = nonGuestRoles.findIndex(r => r.rank === membership.rank);
-      if (currentIdx <= 0) {
-        return { success: false, error: "User is already at the lowest rank" };
-      }
-      
-      const prevRole = nonGuestRoles[currentIdx - 1];
-      return this.setUserRole(userId, prevRole.id);
-    } catch (error: any) {
-      return { success: false, error: error.message || "Demotion failed" };
+		if (!membership) {
+		return { success: false, error: "User is not in the group" };
+		}
+
+		const roles = allRoles
+		.filter((r) => r.rank > 0)
+		.sort((a, b) => a.rank - b.rank);
+
+		const currentIndex = roles.findIndex((r) => r.id === membership.roleId);
+
+		if (currentIndex === -1) {
+		return {
+			success: false,
+			error: `Current Roblox role ${membership.roleId} was not found in group roles`,
+		};
+		}
+
+		const nextRole = roles[currentIndex + 1];
+
+		if (!nextRole) {
+		return { success: false, error: "User is already at the highest rank" };
+		}
+
+		console.log("[RobloxCloud] Promote", {
+		userId,
+		from: roles[currentIndex],
+		to: nextRole,
+		});
+
+		return this.setUserRole(userId, nextRole.id);
+	} catch (error: any) {
+		return { success: false, error: error.message || "Promotion failed" };
+	}
+	}
+
+async demoteUser(userId: number): Promise<RankingResponse> {
+  try {
+    const [membership, allRoles] = await Promise.all([
+      this.getUserMembership(userId),
+      this.getGroupRoles(),
+    ]);
+
+    if (!membership) {
+      return { success: false, error: "User is not in the group" };
     }
+
+    const roles = allRoles
+      .filter((r) => r.rank > 0)
+      .sort((a, b) => a.rank - b.rank);
+
+    const currentIndex = roles.findIndex((r) => r.id === membership.roleId);
+
+    if (currentIndex === -1) {
+      return {
+        success: false,
+        error: `Current Roblox role ${membership.roleId} was not found in group roles`,
+      };
+    }
+
+    const prevRole = roles[currentIndex - 1];
+
+    if (!prevRole) {
+      return { success: false, error: "User is already at the lowest rank" };
+    }
+
+    console.log("[RobloxCloud] Demote", {
+      userId,
+      from: roles[currentIndex],
+      to: prevRole,
+    });
+
+    return this.setUserRole(userId, prevRole.id);
+  } catch (error: any) {
+    return { success: false, error: error.message || "Demotion failed" };
   }
+}
 
   async terminateUser(userId: number): Promise<RankingResponse> {
     try {
       const roles = await this.getGroupRoles();
-      const lowestRole = roles.find(r => r.rank === 1);
-      if (!lowestRole) return { success: false, error: "Could not find lowest rank" };
+      const lowestRole = roles.find((r) => r.rank === 1);
+
+      if (!lowestRole) {
+        return { success: false, error: "Could not find lowest rank" };
+      }
+
       return this.setUserRole(userId, lowestRole.id);
     } catch (error: any) {
       return { success: false, error: error.message || "Termination failed" };
     }
   }
 
-  async setUserRank(userId: number, rankNumber: number): Promise<RankingResponse> {
-    try {
-      const roles = await this.getGroupRoles();
-      const targetRole = roles.find(r => r.rank === rankNumber);
-      if (!targetRole) {
-        return { success: false, error: `No role found with rank number ${rankNumber}` };
-      }
-      return this.setUserRole(userId, targetRole.id);
-    } catch (error: any) {
-      return { success: false, error: error.message || "Rank change failed" };
-    }
+  async setUserRank(userId: number, robloxRoleId: string | number): Promise<RankingResponse> {
+    return this.setUserRole(userId, robloxRoleId);
   }
 }

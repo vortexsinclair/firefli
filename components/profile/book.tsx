@@ -455,11 +455,19 @@ const Book: FC<Props> = ({ userBook, onRefetch, logbookPermissions }) => {
                     <option value="">Select a rank...</option>
                     {ranks
                       .filter((rank) => rank.rank > 0)
-                      .map((rank) => (
-                        <option key={rank.id} value={rank.id}>
-                          {rank.name}
-                        </option>
-                      ))}
+                      .map((rank) => {
+                        const duplicates = ranks.filter(
+                          r => r.rank > 0 && r.name === rank.name && r.rank === rank.rank
+                        );
+                        const displayText = duplicates.length > 1
+                          ? `${rank.name} (Rank ${rank.rank}, ID: ${rank.id})`
+                          : `${rank.name} (Rank ${rank.rank})`;
+                        return (
+                          <option key={rank.id} value={rank.id}>
+                            {displayText}
+                          </option>
+                        );
+                      })}
                   </select>
                 )}
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">

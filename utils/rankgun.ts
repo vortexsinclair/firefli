@@ -147,10 +147,12 @@ class RankGunProvider implements RankingProvider {
   type = "rankgun" as const;
   private api: RankGunAPI;
   private workspaceId: string;
+  private groupId: number;
 
-  constructor(config: RankGun) {
+  constructor(config: RankGun, groupId: number) {
     this.api = new RankGunAPI(config);
     this.workspaceId = config.workspaceId;
+    this.groupId = groupId;
   }
 
   async promoteUser(userId: number) {
@@ -162,8 +164,17 @@ class RankGunProvider implements RankingProvider {
   async terminateUser(userId: number) {
     return this.api.terminateUser(userId, this.workspaceId);
   }
-  async setUserRank(userId: number, rank: number) {
-    return this.api.setUserRank(userId, this.workspaceId, rank);
+  async setUserRank(userId: number, roleId: number) {
+    if (roleId > 255) {
+      const { getGroupRoles } = await import("@/utils/roblox");
+      const roles = await getGroupRoles(this.groupId);
+      const role = roles.find(r => r.id === roleId);
+      if (!role) {
+        return { success: false, error: `No role found with ID ${roleId}` };
+      }
+      return this.api.setUserRank(userId, this.workspaceId, role.rank);
+    }
+    return this.api.setUserRank(userId, this.workspaceId, roleId);
   }
 }
 
@@ -206,7 +217,7 @@ export async function getRankingProvider(
       return new RankGunProvider({
         apiKey: settings.rankingToken,
         workspaceId: String(settings.rankingWorkspaceId),
-      });
+      }, Number(workspaceGroupId));
     }
 
     if (settings.rankingProvider === "roblox_cloud") {

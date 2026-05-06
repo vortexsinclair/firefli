@@ -125,8 +125,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                   workspaceId,
                 );
                 const roles = await cloudApi.getGroupRoles();
-                const roleInfo = roles.find((r) => r.rank === rankBefore);
-                rankNameBefore = roleInfo?.name || null;
+                const roleInfo =
+				rankBefore > 255
+					? roles.find((r) => r.id === rankBefore)
+					: roles.find((r) => r.rank === rankBefore);
+
+				rankBefore = roleInfo?.rank ?? rankBefore;
+				rankNameBefore = roleInfo?.name || null;
               }
             } catch {
               try {
@@ -180,11 +185,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               const membership =
                 await cloudApi.getUserMembership(numericUserId);
               if (membership) {
-                newRank = membership.rank;
                 const roles = await cloudApi.getGroupRoles();
-                const roleInfo = roles.find((r) => r.rank === membership.rank);
-                newRankName = roleInfo?.name || null;
-                newRolesetId = roleInfo?.id || null;
+				const roleInfo = roles.find((r) => r.id === membership.roleId);
+				newRank = roleInfo?.rank ?? membership.rank;
+				newRankName = roleInfo?.name || null;
+				newRolesetId = membership.roleId;
               }
             } else {
               newRank = await getRankInGroup(workspaceId, numericUserId);
