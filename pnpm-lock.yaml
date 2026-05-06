@@ -218,8 +218,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       noblox.js:
-        specifier: ^7.3.1
-        version: 7.3.1
+        specifier: ^9.0.0
+        version: 9.0.0
       node-cache:
         specifier: ^5.1.2
         version: 5.1.2
@@ -3296,8 +3296,8 @@ packages:
   fflate@0.4.8:
     resolution: {integrity: sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA==}
 
-  figlet@1.10.0:
-    resolution: {integrity: sha512-aktIwEZZ6Gp9AWdMXW4YCi0J2Ahuxo67fNJRUIWD81w8pQ0t9TS8FFpbl27ChlTLF06VkwjDesZSzEVzN75rzA==}
+  figlet@1.11.0:
+    resolution: {integrity: sha512-EEx3OS/l2bFqcUNN2NM9FPJp8vAMrgbCxsbl2hbcJNNxOEwVe3mEzrhan7TbJQViZa8mMqhihlbCaqD+LyYKTQ==}
     engines: {node: '>= 17.0.0'}
     hasBin: true
 
@@ -4461,9 +4461,9 @@ packages:
       sass:
         optional: true
 
-  noblox.js@7.3.1:
-    resolution: {integrity: sha512-UowG2caVIjT9VUuXYLak9PRUsh24nIG5MHb6vRSxbuTkM7g/jbsctBLQCutj76FLkpVewlUR7Zv2A0xlo3rN3g==}
-    engines: {node: '>=18.18'}
+  noblox.js@9.0.0:
+    resolution: {integrity: sha512-z25FaxUSreAgB9DLa8Jkw8xXUAVwamyF9MaG4N3DOxhVJxRx9xCIQe5q+ajHMbo0uppskCdYcCr16RsU/UYi6w==}
+    engines: {node: '>=20.0'}
     deprecated: This package is deprecated. See https://github.com/noblox/noblox.js for details.
 
   node-addon-api@7.1.1:
@@ -4846,10 +4846,6 @@ packages:
 
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
-
-  qs@6.14.2:
-    resolution: {integrity: sha512-V/yCWTTF7VJ9hIh18Ugr2zhJMP01MY7c5kh4J870L7imm6/DIzBsNLTXzMwUA3yZ5b/KBqLx8Kp3uRvd7xSe3Q==}
-    engines: {node: '>=0.6'}
 
   qs@6.15.1:
     resolution: {integrity: sha512-6YHEFRL9mfgcAvql/XhwTvf5jKcOiiupt2FiJxHkiX1z4j7WL8J/jRHYLluORvc1XxB5rV20KoeK00gVJamspg==}
@@ -5599,9 +5595,9 @@ packages:
   undici-types@7.19.2:
     resolution: {integrity: sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==}
 
-  undici@7.24.2:
-    resolution: {integrity: sha512-P9J1HWYV/ajFr8uCqk5QixwiRKmB1wOamgS0e+o2Z4A44Ej2+thFVRLG/eA7qprx88XXhnV5Bl8LHXTURpzB3Q==}
-    engines: {node: '>=20.18.1'}
+  undici@8.1.0:
+    resolution: {integrity: sha512-E9MkTS4xXLnRPYqxH2e6Hr2/49e7WFDKczKcCaFH4VaZs2iNvHMqeIkyUAD9vM8kujy9TjVrRlQ5KkdEJxB2pw==}
+    engines: {node: '>=22.19.0'}
 
   unified@10.1.2:
     resolution: {integrity: sha512-pUSWAi/RAnVy1Pif2kAoeWNBa3JVrx0MId2LASj8G+7AiHWoKZNTomq6LG326T68U7/e263X6fTdcXIy7XnF7Q==}
@@ -8198,7 +8194,7 @@ snapshots:
       parse5: 7.3.0
       parse5-htmlparser2-tree-adapter: 7.1.0
       parse5-parser-stream: 7.1.2
-      undici: 7.24.2
+      undici: 8.1.0
       whatwg-mimetype: 4.0.0
 
   chokidar@4.0.3:
@@ -8949,7 +8945,7 @@ snapshots:
 
   fflate@0.4.8: {}
 
-  figlet@1.10.0:
+  figlet@1.11.0:
     dependencies:
       commander: 14.0.3
 
@@ -10498,13 +10494,13 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  noblox.js@7.3.1:
+  noblox.js@9.0.0:
     dependencies:
       '@microsoft/signalr': 8.0.17
       chalk: 5.6.2
       cheerio: 1.2.0
       entities: 5.0.0
-      figlet: 1.10.0
+      figlet: 1.11.0
       postman-request: 2.88.1-postman.48
     transitivePeerDependencies:
       - bufferutil
@@ -10798,7 +10794,7 @@ snapshots:
       json-stringify-safe: 5.0.1
       mime-types: 2.1.35
       oauth-sign: 0.9.0
-      qs: 6.14.2
+      qs: 6.15.1
       safe-buffer: 5.2.1
       socks-proxy-agent: 8.0.5
       stream-length: 1.0.2
@@ -10977,10 +10973,6 @@ snapshots:
   punycode@2.3.1: {}
 
   pure-rand@6.1.0: {}
-
-  qs@6.14.2:
-    dependencies:
-      side-channel: 1.1.0
 
   qs@6.15.1:
     dependencies:
@@ -11952,7 +11944,7 @@ snapshots:
 
   undici-types@7.19.2: {}
 
-  undici@7.24.2: {}
+  undici@8.1.0: {}
 
   unified@10.1.2:
     dependencies:
