@@ -108,7 +108,7 @@ const TransferOwnership: FC<TransferOwnershipProps> = ({
   const selectedMember = members.find((m) => m.userId === selectedMemberId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25">
       <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">

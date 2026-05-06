@@ -76,6 +76,7 @@ import {
   IconLayoutGrid,
   IconCopy,
   IconBeach,
+  IconMinus,
 } from "@tabler/icons-react";
 import { UserGroupIcon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -137,6 +138,10 @@ export const getServerSideProps = withPermissionCheckSsr(
       userRole?.permissions?.includes("delete_views") || false;
     const hasUseSavedViewsPerm =
       userRole?.permissions?.includes("use_views") || false;
+    const hasMassActionsPerm =
+      isAdmin ||
+      userRole?.permissions?.includes("use_mass_actions") ||
+      false;
     const hasViewMemberProfiles =
       isAdmin ||
       userRole?.permissions?.includes("view_member_profiles") ||
@@ -161,6 +166,7 @@ export const getServerSideProps = withPermissionCheckSsr(
         hasCreateViewsPerm: hasCreateViewsPerm,
         hasDeleteViewsPerm: hasDeleteViewsPerm,
         hasUseSavedViewsPerm: hasUseSavedViewsPerm,
+        hasMassActionsPerm: hasMassActionsPerm,
         hasViewMemberProfiles: hasViewMemberProfiles,
         departments: JSON.parse(JSON.stringify(departments)),
       },
@@ -203,6 +209,7 @@ type pageProps = {
   hasCreateViewsPerm: boolean;
   hasDeleteViewsPerm: boolean;
   hasUseSavedViewsPerm: boolean;
+  hasMassActionsPerm: boolean;
   hasViewMemberProfiles: boolean;
   departments: Array<{ id: string; name: string; color: string | null }>;
 };
@@ -212,6 +219,7 @@ const Views: pageWithLayout<pageProps> = ({
   hasCreateViewsPerm,
   hasDeleteViewsPerm,
   hasUseSavedViewsPerm,
+  hasMassActionsPerm,
   hasViewMemberProfiles,
   departments,
 }) => {
@@ -546,7 +554,7 @@ const Views: pageWithLayout<pageProps> = ({
       cell: (row) => {
         const book = row.getValue() as any[];
         const warnings = Array.isArray(book)
-          ? book.filter((b) => b.type === "warning").length
+          ? book.filter((b) => b.type === "warning" && !b.redacted).length
           : 0;
         return <p className="dark:text-white">{warnings}</p>;
       },
@@ -1049,6 +1057,14 @@ const Views: pageWithLayout<pageProps> = ({
           axios.post(`/api/workspace/${router.query.id}/activity/add`, {
             userId: data.info.userId,
             minutes,
+          }),
+        );
+      } else if (type === "award_minutes" || type === "remove_minutes") {
+        promises.push(
+          axios.post(`/api/workspace/${router.query.id}/activity/adjustment`, {
+            userId: Number(data.info.userId),
+            minutes,
+            action: type === "award_minutes" ? "award" : "remove",
           }),
         );
       } else {
@@ -1721,7 +1737,7 @@ const Views: pageWithLayout<pageProps> = ({
                   )}
               </div>
 
-              {table.getSelectedRowModel().flatRows.length > 0 && (
+              {table.getSelectedRowModel().flatRows.length > 0 && hasMassActionsPerm && (
                 <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-wrap gap-2">
                   <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 py-2">
                     {table.getSelectedRowModel().flatRows.length} selected
@@ -1756,6 +1772,28 @@ const Views: pageWithLayout<pageProps> = ({
                     <IconShieldX className="w-4 h-4" />
                     Terminate
                   </button>
+                  <button
+                    onClick={() => {
+                      setMinutes(0);
+                      setType("award_minutes");
+                      setIsOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg text-white bg-blue-600/80 hover:bg-blue-600 transition-all"
+                  >
+                    <IconPlus className="w-4 h-4" />
+                    Award Minutes
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMinutes(0);
+                      setType("remove_minutes");
+                      setIsOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg text-white bg-orange-600/80 hover:bg-orange-600 transition-all"
+                  >
+                    <IconMinus className="w-4 h-4" />
+                    Remove Minutes
+                  </button>
                 </div>
               )}
             </div>
@@ -1777,7 +1815,7 @@ const Views: pageWithLayout<pageProps> = ({
                   {table.getRowModel().rows.map((row) => {
                     const user = row.original;
                     const warnings = Array.isArray(user.book)
-                      ? user.book.filter((b: any) => b.type === "warning")
+                      ? user.book.filter((b: any) => b.type === "warning" && !b.redacted)
                           .length
                       : 0;
                     const hosted = user.hostedSessions as any;
@@ -2245,7 +2283,7 @@ const Views: pageWithLayout<pageProps> = ({
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <div className="fixed inset-0 bg-black bg-opacity-25" />
+              <div className="fixed inset-0 bg-black/25" />
             </Transition.Child>
 
             <div className="fixed inset-0 overflow-y-auto">
@@ -2265,7 +2303,7 @@ const Views: pageWithLayout<pageProps> = ({
                       className="flex items-center justify-between mb-3"
                     >
                       <h3 className="text-lg font-medium text-zinc-900 dark:text-white">
-                        Mass {type} {type === "add" ? "minutes" : ""}
+                        {type === "add" ? "Mass Add Minutes" : type === "award_minutes" ? "Mass Award Minutes" : type === "remove_minutes" ? "Mass Remove Minutes" : `Mass ${type}`}
                       </h3>
                       <button
                         onClick={() => setIsOpen(false)}
@@ -2278,20 +2316,20 @@ const Views: pageWithLayout<pageProps> = ({
                     <FormProvider
                       {...useForm({
                         defaultValues: {
-                          value: type === "add" ? minutes.toString() : message,
+                          value: (type === "add" || type === "award_minutes" || type === "remove_minutes") ? minutes.toString() : message,
                         },
                       })}
                     >
                       <div className="mt-3">
                         <Input
-                          type={type === "add" ? "number" : "text"}
-                          placeholder={type === "add" ? "Minutes" : "Message"}
-                          value={type === "add" ? minutes.toString() : message}
+                          type={(type === "add" || type === "award_minutes" || type === "remove_minutes") ? "number" : "text"}
+                          placeholder={(type === "add" || type === "award_minutes" || type === "remove_minutes") ? "Minutes" : "Message"}
+                          value={(type === "add" || type === "award_minutes" || type === "remove_minutes") ? minutes.toString() : message}
                           name="value"
                           id="value"
                           onBlur={async () => true}
                           onChange={async (e) => {
-                            if (type === "add") {
+                            if (type === "add" || type === "award_minutes" || type === "remove_minutes") {
                               setMinutes(parseInt(e.target.value) || 0);
                             } else {
                               setMessage(e.target.value);
@@ -2450,7 +2488,7 @@ const Views: pageWithLayout<pageProps> = ({
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
-              <div className="fixed inset-0 bg-black bg-opacity-25" />
+              <div className="fixed inset-0 bg-black/25" />
             </Transition.Child>
             <div className="fixed inset-0 overflow-y-auto">
               <div className="flex min-h-full items-center justify-center p-4 text-center">

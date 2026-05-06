@@ -1082,20 +1082,24 @@ const Profile: pageWithLayout<pageProps> = ({
                 historicalData.activity.sessionsAttended,
             data: historicalData.chartData || [0, 0, 0, 0, 0, 0, 0],
             quotas: historicalData.activity.quotaProgress
-              ? Object.values(historicalData.activity.quotaProgress).map(
-                  (qp: any) => ({
-                    id: qp.id || qp.name || "",
+              ? Object.entries(historicalData.activity.quotaProgress).map(
+                  ([quotaId, qp]: [string, any]) => ({
+                    id: quotaId,
                     name: qp.name || "",
                     type: qp.type || "",
                     value: qp.requirement || 0,
                     workspaceGroupId: BigInt(router.query.id as string),
                     description: null,
                     sessionType: null,
-                    completionType: null,
+                    completionType: qp.completionType || null,
                     sessionRole: null,
                     currentValue: qp.value || 0,
                     percentage: qp.percentage || 0,
                     completed: qp.completed || false,
+                    completedAt: qp.completedAt ? new Date(qp.completedAt) : null,
+                    completedByUser: qp.completedByUsername
+                      ? { username: qp.completedByUsername }
+                      : null,
                   }),
                 )
               : [],

@@ -6,8 +6,11 @@ import Input from "@/components/input";
 import Workspace from "@/layouts/workspace";
 import { useRecoilState } from "recoil";
 import { useEffect, useState } from "react";
+import { Listbox } from "@headlessui/react";
 import {
   IconArrowLeft,
+  IconCheck,
+  IconChevronDown,
   IconDeviceFloppy,
   IconTrash,
   IconPlus,
@@ -18,6 +21,7 @@ import {
   IconClipboardList,
 } from "@tabler/icons-react";
 import { withPermissionCheckSsr } from "@/utils/permissionsManager";
+import * as noblox from "noblox.js";
 import { useRouter } from "next/router";
 import axios from "axios";
 import prisma from "@/utils/database";
@@ -60,6 +64,23 @@ function getRandomBg(userid: string, username?: string) {
 export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
   async (context) => {
     const { id, sid } = context.query;
+
+    let games: { name: string; id: number }[] = [];
+    let fallbackToManual = false;
+
+    try {
+      const fetchedGames = await noblox.getGroupGames(Number(id));
+      games = fetchedGames
+        .filter((game: any) => game.rootPlace?.type === "Place")
+        .map((game: any) => ({
+          name: game.name,
+          id: Number(game.rootPlace.id),
+        }))
+        .filter((game: any) => !isNaN(game.id) && game.id > 0);
+    } catch (err) {
+      console.error("Failed to fetch games from noblox:", err);
+      fallbackToManual = true;
+    }
 
     try {
       const session = await prisma.session.findUnique({
@@ -104,6 +125,8 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
 
       return {
         props: {
+          games,
+          fallbackToManual,
           session: JSON.parse(
             JSON.stringify(session, (key, value) =>
               typeof value === "bigint" ? value.toString() : value
@@ -133,7 +156,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
 
 const EditSession: pageWithLayout<
   InferGetServerSidePropsType<GetServerSideProps>
-> = ({ session, roles }) => {
+> = ({ session, roles, games, fallbackToManual }) => {
   const [login, setLogin] = useRecoilState(loginState);
   const [workspace, setWorkspace] = useRecoilState(workspacestate);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,6 +167,9 @@ const EditSession: pageWithLayout<
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateAll, setUpdateAll] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [selectedGame, setSelectedGame] = useState(
+    (session as any).sessionType?.gameId?.toString() ?? ""
+  );
   const [roleTemplates, setRoleTemplates] = useState<any[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -349,11 +375,12 @@ const EditSession: pageWithLayout<
         }
 
         const [dateStr, timeStr] = localDateTime.split("T");
+        const resolvedGameId = fallbackToManual ? formData.gameId : selectedGame;
         await axios.put(
           `/api/workspace/${workspace.groupId}/sessions/manage/${session.id}/manage`,
           {
             name: formData.name,
-            gameId: formData.gameId,
+            gameId: resolvedGameId,
             date: dateStr,
             time: timeStr,
             description: formData.description,
@@ -371,6 +398,7 @@ const EditSession: pageWithLayout<
         const selectedSlots = roleTemplates
           .filter((t) => selectedTemplateIds.has(t.id))
           .map((t) => ({ id: t.id, name: t.name, slots: t.slots, categoryId: t.categoryId || null, categoryName: t.category?.name || null, categoryWeight: t.category?.weight ?? 0, weight: t.weight ?? 0, hostRole: t.hostRole || null, groupRoles: t.groupRoles || [] }));
+        const resolvedGameId = fallbackToManual ? form.getValues().gameId : selectedGame;
         await axios.post(
           `/api/workspace/${workspace.groupId}/sessions/manage/${session.sessionTypeId}/edit`,
           {
@@ -378,6 +406,7 @@ const EditSession: pageWithLayout<
             permissions: (session.sessionType.hostingRoles || []).map((r: any) => r.id),
             statues: session.sessionType.statues || [],
             slots: selectedSlots,
+            gameId: resolvedGameId,
           }
         );
       }
@@ -550,7 +579,7 @@ const EditSession: pageWithLayout<
       </div>
 
       <FormProvider {...form}>
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 overflow-hidden">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700">
           {activeTab === "basic" && (
             <div className="p-6" id="basic">
               <div className="flex gap-8 items-start">
@@ -577,7 +606,103 @@ const EditSession: pageWithLayout<
                     </div>
                   </div>
                   <div>
-                    <Input {...form.register("gameId")} label="Game ID" placeholder="Optional game ID" />
+                    {games && games.length > 0 && !fallbackToManual ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                          Game
+                        </label>
+                        <Listbox as="div" className="relative">
+                          <Listbox.Button className="flex items-center justify-between w-full px-4 py-2.5 text-left bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-sm">
+                            <span className="block truncate text-zinc-700 dark:text-white">
+                              {games?.find(
+                                (game: { name: string; id: number }) =>
+                                  game.id === Number(selectedGame)
+                              )?.name || "None"}
+                            </span>
+                            <IconChevronDown
+                              size={18}
+                              className="text-zinc-500 dark:text-zinc-400"
+                            />
+                          </Listbox.Button>
+                          <Listbox.Options className="absolute z-50 w-full mt-1 overflow-auto bg-white dark:bg-zinc-800 rounded-lg shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            {games.map((game: { name: string; id: number }) => (
+                              <Listbox.Option
+                                key={game.id}
+                                value={game.id}
+                                onClick={() => setSelectedGame(game.id.toString())}
+                                className={({ active }) =>
+                                  `${
+                                    active
+                                      ? "bg-primary/10 text-primary"
+                                      : "text-zinc-900 dark:text-white"
+                                  } cursor-pointer select-none relative py-2.5 pl-10 pr-4`
+                                }
+                              >
+                                {({ selected, active }) => (
+                                  <>
+                                    <span
+                                      className={`${
+                                        selected ? "font-medium" : "font-normal"
+                                      } block truncate`}
+                                    >
+                                      {game.name}
+                                    </span>
+                                    {selectedGame === game.id.toString() && (
+                                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                                        <IconCheck size={18} aria-hidden="true" />
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </Listbox.Option>
+                            ))}
+                            <div className="h-[1px] rounded-xl w-full px-3 bg-zinc-200 dark:bg-zinc-700" />
+                            <Listbox.Option
+                              value="None"
+                              onClick={() => setSelectedGame("")}
+                              className={({ active }) =>
+                                `${
+                                  active
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-zinc-900 dark:text-white"
+                                } cursor-pointer select-none relative py-2.5 pl-10 pr-4`
+                              }
+                            >
+                              {({ selected, active }) => (
+                                <>
+                                  <span
+                                    className={`${
+                                      selected ? "font-medium" : "font-normal"
+                                    } block truncate`}
+                                  >
+                                    None
+                                  </span>
+                                  {selectedGame === "" && (
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                                      <IconCheck size={18} aria-hidden="true" />
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </Listbox.Option>
+                          </Listbox.Options>
+                        </Listbox>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                          Select the game where this session will take place
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Input
+                          {...form.register("gameId")}
+                          label="Game ID"
+                          placeholder="Enter the place ID"
+                        />
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                          Enter the Roblox place ID where this session will take place
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-8 flex justify-end">
                     <Button onPress={() => setActiveTab("scheduling")} classoverride="bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:text-white dark:hover:bg-primary/90">Next</Button>

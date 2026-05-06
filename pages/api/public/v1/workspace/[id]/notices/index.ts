@@ -101,7 +101,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // POST - Create notice
     if (req.method === "POST") {
-      const { userId, startTime, endTime, reason } = req.body
+      const { userId, startTime, endTime, reason, reviewed } = req.body
 
       if (!userId || !startTime || !reason) {
         return res.status(400).json({
@@ -110,6 +110,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
       }
 
+      const requiresReview = reviewed === false
       const notice = await prisma.inactivityNotice.create({
         data: {
           userId: BigInt(userId),
@@ -117,8 +118,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           startTime: new Date(startTime),
           endTime: endTime ? new Date(endTime) : null,
           reason,
-          approved: false,
-          reviewed: false,
+          approved: !requiresReview,
+          reviewed: !requiresReview,
           revoked: false,
         },
         include: {

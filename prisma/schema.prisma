@@ -46,6 +46,7 @@ model workspace {
   playerReports       PlayerReport[]
   adminMessageLogs    AdminMessageLog[]
   recommendations     Recommendation[]
+  notifications        Notification[]
 }
 
 model config {
@@ -64,6 +65,13 @@ model instanceConfig {
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model thumbnails {
+  placeId    BigInt   @id
+  universeId BigInt?
+  imageUrl   String
+  updatedAt  DateTime @updatedAt
 }
 
 model user {
@@ -109,6 +117,7 @@ model user {
   localViews            SavedView[]            @relation("UserLocalViews")
   quotaCompletions      UserQuotaCompletion[]  @relation("UserQuotaCompletions")
   completedQuotas       UserQuotaCompletion[]  @relation("CompletedByUser")
+  notifications         Notification[]
 
   @@index([birthdayMonth, birthdayDay])
 }
@@ -344,9 +353,6 @@ model Session {
   scheduleId       String?       @db.Uuid
   sessionTagId     String?       @db.Uuid
   duration         Int           @default(30)
-  discordMessageId   String?
-  discordChannelId   String?
-  lastDiscordStatus  String?
   archiveEndDate   DateTime?
   archiveStartDate DateTime?
   archived         Boolean?      @default(false)
@@ -780,35 +786,6 @@ model DiscordIntegration {
   birthdayEmbedColor        String?
   birthdayEmbedDescription  String?
 
-  sessionChannelId          String?
-  sessionChannelName        String?
-  sessionNotifyOnCreate     Boolean   @default(false)
-  sessionNotifyOnClaim      Boolean   @default(false)
-  sessionNotifyOnStart      Boolean   @default(false)
-  sessionEmbedTitle         String?
-  sessionEmbedColor         String?
-  sessionEmbedDescription   String?
-  sessionEmbedFooter        String?
-  sessionCreateEmbedTitle   String?
-  sessionCreateEmbedColor   String?
-  sessionCreateEmbedDescription String?
-  sessionCreateEmbedFooter  String?
-  sessionClaimEmbedTitle    String?
-  sessionClaimEmbedColor    String?
-  sessionClaimEmbedDescription String?
-  sessionClaimEmbedFooter   String?
-  sessionStartEmbedTitle    String?
-  sessionStartEmbedColor    String?
-  sessionStartEmbedDescription String?
-  sessionStartEmbedFooter   String?
-  sessionReviewEmbedTitle       String?
-  sessionReviewEmbedColor       String?
-  sessionReviewEmbedDescription String?
-  sessionReviewEmbedFooter      String?
-  sessionPingRoleId         String?
-  sessionPingRoleName       String?
-  pingRoles                 Json?
-
   isActive         Boolean   @default(true)
   lastMessageAt    DateTime?
   errorCount       Int       @default(0)
@@ -985,4 +962,21 @@ model RecommendationComment {
   recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
   @@index([recommendationId, createdAt])
+}
+
+model Notification {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           BigInt
+  workspaceGroupId BigInt
+  type             String
+  title            String
+  body             String
+  href             String?
+  read             Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  user             user      @relation(fields: [userId], references: [userid], onDelete: Cascade)
+  workspace        workspace @relation(fields: [workspaceGroupId], references: [groupId], onDelete: Cascade)
+
+  @@index([userId, workspaceGroupId, read])
+  @@index([userId, workspaceGroupId, createdAt])
 }

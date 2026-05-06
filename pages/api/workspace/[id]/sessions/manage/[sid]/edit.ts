@@ -56,7 +56,9 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     data: {
       workspaceGroupId: parseInt(req.query.id as string),
       name,
-      gameId: req.body.gameId ? BigInt(req.body.gameId as string) : null,
+      ...(req.body.gameId !== undefined
+        ? { gameId: req.body.gameId ? BigInt(req.body.gameId as string) : null }
+        : {}),
       statues: statues || [],
       slots: slots || [],
       hostingRoles: {

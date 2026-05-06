@@ -83,6 +83,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return total
     }, 0)
 
+    const totalMessages = sessions.reduce((total, session) => total + (session.messages || 0), 0)
+    const totalIdleTime = sessions.reduce((total, session) => total + Math.round(Number(session.idleTime) || 0), 0)
+
     const completedSessions = sessions.filter((session) => session.endTime)
     const averageSessionLength =
       completedSessions.length > 0
@@ -100,6 +103,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       duration: session.endTime ? Math.floor((session.endTime.getTime() - session.startTime.getTime()) / 1000) : null,
       messages: session.messages,
       universeId: session.universeId ? Number(session.universeId) : null,
+    }))
+
+    const adjustments = await prisma.activityAdjustment.findMany({
+      where: {
+        workspaceGroupId: workspaceId,
+        userId: BigInt(userId as string),
+        createdAt: {
+          gte: startDate,
+        },
+        archived: { not: true },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        actor: {
+          select: { username: true },
+        },
+      },
+    })
+
+    const totalAdjustmentMinutes = adjustments.reduce((total, adj) => total + adj.minutes, 0)
+
+    const formattedAdjustments = adjustments.map((adj) => ({
+      id: adj.id,
+      minutes: adj.minutes,
+      reason: adj.reason,
+      actorUsername: adj.actor?.username ?? null,
+      createdAt: adj.createdAt,
     }))
 
     const notices = await prisma.inactivityNotice.findMany({
@@ -141,8 +173,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       activity: {
         sessions: formattedSessions,
         totalSessions: formattedSessions.length,
-        totalActivityTime,
+        totalActivityTime: totalActivityTime + totalAdjustmentMinutes * 60,
         averageSessionLength,
+        totalMessages,
+        totalIdleTime,
+        adjustments: formattedAdjustments,
         notices: formattedNotices,
       },
     })

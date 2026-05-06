@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
 import { withPermissionCheck } from "@/utils/permissionsManager";
-import { editSessionNotification } from "@/utils/session-notification";
 
 type Data = {
   success: boolean;
@@ -52,8 +51,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         name: name.trim(),
       },
     });
-
-    editSessionNotification(sessionId as string).catch(() => {});
 
     res.status(200).json({
       success: true,

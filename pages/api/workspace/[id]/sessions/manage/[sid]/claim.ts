@@ -2,7 +2,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma, { schedule } from "@/utils/database";
 import { withSessionRoute } from "@/lib/withSession";
-import { sendSessionNotification } from "@/utils/session-notification";
 import roles from "../../../settings/roles";
 type Data = {
   success: boolean;
@@ -131,16 +130,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       },
     });
 
-    sendSessionNotification(parseInt(req.query.id as string), 'claim', {
-      id: findSession.id,
-      name: findSession.name || schedule.sessionType.name,
-      type: findSession.type || 'other',
-      date: findSession.date,
-      duration: (findSession as any).duration || 30,
-      hostUserId: Number(req.session.userid),
-      sessionTypeName: schedule.sessionType.name,
-    }).catch(() => {});
-
     return res
       .status(200)
       .json({
@@ -181,22 +170,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       },
     },
   });
-
-  // Find the newly created session for notification
-  const newSession = schedulewithsession.sessions?.find((s: any) =>
-    s.date.getTime() === dateTime.getTime()
-  );
-  if (newSession) {
-    sendSessionNotification(parseInt(req.query.id as string), 'claim', {
-      id: newSession.id,
-      name: (newSession as any).name || schedule.sessionType.name,
-      type: (newSession as any).type || 'other',
-      date: newSession.date,
-      duration: (newSession as any).duration || 30,
-      hostUserId: Number(req.session.userid),
-      sessionTypeName: schedule.sessionType.name,
-    }).catch(() => {});
-  }
 
   res
     .status(200)

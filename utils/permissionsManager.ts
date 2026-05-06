@@ -394,6 +394,12 @@ export async function checkGroupRoles(groupID: bigint | number) {
       console.error(`[Refresh] Failed to update group info cache:`, err);
     }
 
+    try {
+      await refreshGameThumbnailsForWorkspace(Number(groupID));
+    } catch (err) {
+      console.error(`[Refresh] Failed to refresh game thumbnail cache:`, err);
+    }
+
     // Migrate users from old admin role to new workspace membership check
     try {
       const ownerRoles = await prisma.role.findMany({
@@ -1331,4 +1337,65 @@ export async function checkSpecificUser(userID: number) {
     });
     return true;
   }
+}
+
+async function fetchThumbnailUrlByPlaceId(placeId: bigint): Promise<{ universeId: bigint | null; imageUrl: string } | null> {
+  const noThrow = { timeout: 8000, validateStatus: () => true };
+  const axiosLib = (await import("axios")).default;
+
+  const getThumbnailByUniverseId = async (universeId: string | number) => {
+    const r = await axiosLib.get(
+      `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${universeId}&size=768x432&format=Png&isCircular=false`,
+      noThrow
+    );
+    const entry = r.data?.data?.[0];
+    const url: string | undefined = entry?.thumbnails?.[0]?.imageUrl;
+    return url && entry?.thumbnails?.[0]?.state === "Completed" ? url : undefined;
+  };
+
+  // Try as universe ID directly
+  const directUrl = await getThumbnailByUniverseId(placeId.toString()).catch(() => undefined);
+  if (directUrl) return { universeId: placeId, imageUrl: directUrl };
+
+  // Resolve as place ID → universe ID
+  const universeRes = await axiosLib.get(
+    `https://apis.roblox.com/universes/v1/places/${placeId}/universe`,
+    noThrow
+  ).catch(() => null);
+  const universeId: number | undefined = universeRes?.data?.universeId;
+  if (!universeId) return null;
+
+  const thumbUrl = await getThumbnailByUniverseId(universeId).catch(() => undefined);
+  if (!thumbUrl) return null;
+
+  return { universeId: BigInt(universeId), imageUrl: thumbUrl };
+}
+
+export async function refreshGameThumbnailsForWorkspace(workspaceGroupId: number): Promise<void> {
+  const sessionTypes = await prisma.sessionType.findMany({
+    where: { workspaceGroupId, gameId: { not: null } },
+    select: { gameId: true },
+  });
+
+  const uniquePlaceIds = [...new Set(sessionTypes.map((s) => s.gameId!.toString()))];
+  if (uniquePlaceIds.length === 0) return;
+
+  console.log(`[Refresh] Refreshing ${uniquePlaceIds.length} game thumbnail(s) for workspace ${workspaceGroupId}`);
+
+  for (const placeIdStr of uniquePlaceIds) {
+    const placeId = BigInt(placeIdStr);
+    try {
+      const result = await fetchThumbnailUrlByPlaceId(placeId);
+      if (!result) continue;
+      await (prisma as any).thumbnails.upsert({
+        where: { placeId },
+        update: { universeId: result.universeId, imageUrl: result.imageUrl, updatedAt: new Date() },
+        create: { placeId, universeId: result.universeId, imageUrl: result.imageUrl },
+      });
+    } catch (err) {
+      console.error(`[Refresh] Failed to cache thumbnail for placeId ${placeId}:`, err);
+    }
+  }
+
+  console.log(`[Refresh] Game thumbnail cache updated for workspace ${workspaceGroupId}`);
 }

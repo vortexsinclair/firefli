@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { workspacestate } from '@/state';
 import { useRecoilState } from 'recoil';
-import { IconCheck, IconX, IconRefresh, IconTrash, IconBrandDiscord, IconSettings, IconPalette, IconBell, IconTrendingUp, IconTrendingDown, IconAlertTriangle, IconBan, IconCake, IconFileText, IconCircleCheck, IconCircleX, IconCalendarEvent, IconClipboardCheck } from '@tabler/icons-react';
+import { IconCheck, IconX, IconRefresh, IconTrash, IconBrandDiscord, IconSettings, IconPalette, IconBell, IconTrendingUp, IconTrendingDown, IconAlertTriangle, IconBan, IconCake, IconFileText, IconCircleCheck, IconCircleX } from '@tabler/icons-react';
 import { FC } from '@/types/settingsComponent';
 import { set } from 'zod/v4';
 import { setRandomFallback } from 'bcryptjs';
@@ -75,36 +75,6 @@ type DiscordIntegration = {
   noticeDenialEmbedColor?: string | null;
   noticeDenialEmbedDescription?: string | null;
   noticeDenialEmbedFooter?: string | null;
-  // Session notification fields
-  sessionChannelId?: string | null;
-  sessionChannelName?: string | null;
-  sessionNotifyOnCreate?: boolean;
-  sessionNotifyOnClaim?: boolean;
-  sessionNotifyOnStart?: boolean;
-  sessionEmbedTitle?: string | null;
-  sessionEmbedColor?: string | null;
-  sessionEmbedDescription?: string | null;
-  sessionEmbedFooter?: string | null;
-  sessionCreateEmbedTitle?: string | null;
-  sessionCreateEmbedColor?: string | null;
-  sessionCreateEmbedDescription?: string | null;
-  sessionCreateEmbedFooter?: string | null;
-  sessionClaimEmbedTitle?: string | null;
-  sessionClaimEmbedColor?: string | null;
-  sessionClaimEmbedDescription?: string | null;
-  sessionClaimEmbedFooter?: string | null;
-  sessionStartEmbedTitle?: string | null;
-  sessionStartEmbedColor?: string | null;
-  sessionStartEmbedDescription?: string | null;
-  sessionStartEmbedFooter?: string | null;
-  // Session review embed templates
-  sessionReviewEmbedTitle?: string | null;
-  sessionReviewEmbedColor?: string | null;
-  sessionReviewEmbedDescription?: string | null;
-  sessionReviewEmbedFooter?: string | null;
-  sessionPingRoleId?: string | null;
-  sessionPingRoleName?: string | null;
-  pingRoles?: Record<string, string> | null;
 };
 
 const EVENT_TYPES = [
@@ -114,8 +84,6 @@ const EVENT_TYPES = [
   { id: 'document.create', label: 'Document Created', description: 'When new documents are created' },
   { id: 'document.update', label: 'Document Updated', description: 'When documents are edited' },
   { id: 'document.delete', label: 'Document Deleted', description: 'When documents are removed' },
-  { id: 'session.create', label: 'Session Created', description: 'When new training sessions are created' },
-  { id: 'session.delete', label: 'Session Deleted', description: 'When training sessions are removed' },
   { id: 'wall.post.create', label: 'Wall Post Created', description: 'When new wall posts are made' },
   { id: 'wall.post.delete', label: 'Wall Post Deleted', description: 'When wall posts are removed' },
   { id: 'user.role.update', label: 'Role Updates', description: 'When user roles are changed' },
@@ -194,66 +162,24 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
   const [editNoticeDenialEmbedDescription, setEditNoticeDenialEmbedDescription] = useState<string>('');
   const [editNoticeDenialEmbedFooter, setEditNoticeDenialEmbedFooter] = useState<string>('');
 
-  // Session notification states
-  const [editSessionNotifyOnCreate, setEditSessionNotifyOnCreate] = useState<boolean>(false);
-  const [editSessionNotifyOnClaim, setEditSessionNotifyOnClaim] = useState<boolean>(false);
-  const [editSessionNotifyOnStart, setEditSessionNotifyOnStart] = useState<boolean>(false);
-  const [editSessionChannelId, setEditSessionChannelId] = useState<string>('');
-  const [sessionChannels, setSessionChannels] = useState<DiscordChannel[]>([]);
   const [discordRoles, setDiscordRoles] = useState<Array<{ id: string; name: string; color: number; position: number }>>([]);
-  const [loadingSessionChannels, setLoadingSessionChannels] = useState<boolean>(false);
   const [editPingRoles, setEditPingRoles] = useState<Record<string, string>>({});
   const [showRemoveModal, setShowRemoveModal] = useState(false);
-
-  // Session embed states
-  const [editSessionEmbedTitle, setEditSessionEmbedTitle] = useState<string>('');
-  const [editSessionEmbedColor, setEditSessionEmbedColor] = useState<string>('');
-  const [editSessionEmbedDescription, setEditSessionEmbedDescription] = useState<string>('');
-  const [editSessionEmbedFooter, setEditSessionEmbedFooter] = useState<string>('');
-
-  // Session Create embed states
-  const [editSessionCreateEmbedTitle, setEditSessionCreateEmbedTitle] = useState<string>('');
-  const [editSessionCreateEmbedColor, setEditSessionCreateEmbedColor] = useState<string>('');
-  const [editSessionCreateEmbedDescription, setEditSessionCreateEmbedDescription] = useState<string>('');
-  const [editSessionCreateEmbedFooter, setEditSessionCreateEmbedFooter] = useState<string>('');
-
-  // Session Claim embed states
-  const [editSessionClaimEmbedTitle, setEditSessionClaimEmbedTitle] = useState<string>('');
-  const [editSessionClaimEmbedColor, setEditSessionClaimEmbedColor] = useState<string>('');
-  const [editSessionClaimEmbedDescription, setEditSessionClaimEmbedDescription] = useState<string>('');
-  const [editSessionClaimEmbedFooter, setEditSessionClaimEmbedFooter] = useState<string>('');
-
-  // Session Start embed states
-  const [editSessionStartEmbedTitle, setEditSessionStartEmbedTitle] = useState<string>('');
-  const [editSessionStartEmbedColor, setEditSessionStartEmbedColor] = useState<string>('');
-  const [editSessionStartEmbedDescription, setEditSessionStartEmbedDescription] = useState<string>('');
-  const [editSessionStartEmbedFooter, setEditSessionStartEmbedFooter] = useState<string>('');
-
-  // Session review embed states
-  const [editSessionReviewEmbedTitle, setEditSessionReviewEmbedTitle] = useState<string>('');
-  const [editSessionReviewEmbedColor, setEditSessionReviewEmbedColor] = useState<string>('');
-  const [editSessionReviewEmbedDescription, setEditSessionReviewEmbedDescription] = useState<string>('');
-  const [editSessionReviewEmbedFooter, setEditSessionReviewEmbedFooter] = useState<string>('');
-
 
   // Role mention autocomplete
   const [showRoleMention, setShowRoleMention] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionStartPos, setMentionStartPos] = useState<number>(0);
 
-  const fetchSessionChannels = async () => {
-    if (!integration || sessionChannels.length > 0) return;
-    setLoadingSessionChannels(true);
+  const fetchDiscordRoles = async () => {
+    if (!integration || discordRoles.length > 0) return;
     try {
       const res = await axios.get(`/api/workspace/${workspace.groupId}/settings/discord/integration-channels`);
       if (res.data?.success) {
-        setSessionChannels(res.data.channels);
         if (res.data.roles) setDiscordRoles(res.data.roles);
       }
     } catch (e) {
-      console.error('Failed to fetch session channels:', e);
-    } finally {
-      setLoadingSessionChannels(false);
+      console.error('Failed to fetch Discord roles:', e);
     }
   };
 
@@ -479,35 +405,7 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
     const noticeDenialColorChanged = editNoticeDenialEmbedColor !== (integration.noticeDenialEmbedColor || '');
     const noticeDenialDescChanged = editNoticeDenialEmbedDescription !== (integration.noticeDenialEmbedDescription || '');
     const noticeDenialFooterChanged = editNoticeDenialEmbedFooter !== (integration.noticeDenialEmbedFooter || '');
-
-    // Check session notification changes
-    const sessionNotifyCreateChanged = editSessionNotifyOnCreate !== (integration.sessionNotifyOnCreate || false);
-    const sessionNotifyClaimChanged = editSessionNotifyOnClaim !== (integration.sessionNotifyOnClaim || false);
-    const sessionNotifyStartChanged = editSessionNotifyOnStart !== (integration.sessionNotifyOnStart || false);
-    const sessionChannelChanged = editSessionChannelId !== (integration.sessionChannelId || '');
-    const sessionTitleChanged = editSessionEmbedTitle !== (integration.sessionEmbedTitle || '');
-    const sessionColorChanged = editSessionEmbedColor !== (integration.sessionEmbedColor || '');
-    const sessionDescChanged = editSessionEmbedDescription !== (integration.sessionEmbedDescription || '');
-    const sessionFooterChanged = editSessionEmbedFooter !== (integration.sessionEmbedFooter || '');
-    const sessionCreateTitleChanged = editSessionCreateEmbedTitle !== (integration.sessionCreateEmbedTitle || '');
-    const sessionCreateColorChanged = editSessionCreateEmbedColor !== (integration.sessionCreateEmbedColor || '');
-    const sessionCreateDescChanged = editSessionCreateEmbedDescription !== (integration.sessionCreateEmbedDescription || '');
-    const sessionCreateFooterChanged = editSessionCreateEmbedFooter !== (integration.sessionCreateEmbedFooter || '');
-    const sessionClaimTitleChanged = editSessionClaimEmbedTitle !== (integration.sessionClaimEmbedTitle || '');
-    const sessionClaimColorChanged = editSessionClaimEmbedColor !== (integration.sessionClaimEmbedColor || '');
-    const sessionClaimDescChanged = editSessionClaimEmbedDescription !== (integration.sessionClaimEmbedDescription || '');
-    const sessionClaimFooterChanged = editSessionClaimEmbedFooter !== (integration.sessionClaimEmbedFooter || '');
-    const sessionStartTitleChanged = editSessionStartEmbedTitle !== (integration.sessionStartEmbedTitle || '');
-    const sessionStartColorChanged = editSessionStartEmbedColor !== (integration.sessionStartEmbedColor || '');
-    const sessionStartDescChanged = editSessionStartEmbedDescription !== (integration.sessionStartEmbedDescription || '');
-    const sessionStartFooterChanged = editSessionStartEmbedFooter !== (integration.sessionStartEmbedFooter || '');
-    const pingRolesChanged = JSON.stringify(editPingRoles) !== JSON.stringify(integration.pingRoles || {});
-
-    // Check session review embed changes
-    const sessionReviewTitleChanged = editSessionReviewEmbedTitle !== (integration.sessionReviewEmbedTitle || '');
-    const sessionReviewColorChanged = editSessionReviewEmbedColor !== (integration.sessionReviewEmbedColor || '');
-    const sessionReviewDescChanged = editSessionReviewEmbedDescription !== (integration.sessionReviewEmbedDescription || '');
-    const sessionReviewFooterChanged = editSessionReviewEmbedFooter !== (integration.sessionReviewEmbedFooter || '');
+    const pingRolesChanged = Object.keys(editPingRoles).length > 0;
 
     setHasChanges(
       eventsChanged || birthdayChanged || embedTitleChanged || embedColorChanged ||
@@ -521,13 +419,7 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
       noticeSubmitDescChanged || noticeSubmitFooterChanged || noticeApprovalTitleChanged ||
       noticeApprovalColorChanged || noticeApprovalDescChanged || noticeApprovalFooterChanged ||
       noticeDenialTitleChanged || noticeDenialColorChanged || noticeDenialDescChanged || noticeDenialFooterChanged ||
-      sessionNotifyCreateChanged || sessionNotifyClaimChanged || sessionNotifyStartChanged || sessionChannelChanged ||
-      sessionTitleChanged || sessionColorChanged || sessionDescChanged || sessionFooterChanged ||
-      sessionCreateTitleChanged || sessionCreateColorChanged || sessionCreateDescChanged || sessionCreateFooterChanged ||
-      sessionClaimTitleChanged || sessionClaimColorChanged || sessionClaimDescChanged || sessionClaimFooterChanged ||
-      sessionStartTitleChanged || sessionStartColorChanged || sessionStartDescChanged || sessionStartFooterChanged ||
-      pingRolesChanged ||
-      sessionReviewTitleChanged || sessionReviewColorChanged || sessionReviewDescChanged || sessionReviewFooterChanged
+      pingRolesChanged
     );
   };
 
@@ -587,39 +479,7 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
     setEditNoticeDenialEmbedDescription(integration.noticeDenialEmbedDescription || '');
     setEditNoticeDenialEmbedFooter(integration.noticeDenialEmbedFooter || '');
 
-    // Populate session states
-    setEditSessionNotifyOnCreate(integration.sessionNotifyOnCreate || false);
-    setEditSessionNotifyOnClaim(integration.sessionNotifyOnClaim || false);
-    setEditSessionNotifyOnStart(integration.sessionNotifyOnStart || false);
-    setEditSessionChannelId(integration.sessionChannelId || '');
-    setEditSessionEmbedTitle(integration.sessionEmbedTitle || '');
-    setEditSessionEmbedColor(integration.sessionEmbedColor || '');
-    setEditSessionEmbedDescription(integration.sessionEmbedDescription || '');
-    setEditSessionEmbedFooter(integration.sessionEmbedFooter || '');
-    setEditSessionCreateEmbedTitle(integration.sessionCreateEmbedTitle || '');
-    setEditSessionCreateEmbedColor(integration.sessionCreateEmbedColor || '');
-    setEditSessionCreateEmbedDescription(integration.sessionCreateEmbedDescription || '');
-    setEditSessionCreateEmbedFooter(integration.sessionCreateEmbedFooter || '');
-    setEditSessionClaimEmbedTitle(integration.sessionClaimEmbedTitle || '');
-    setEditSessionClaimEmbedColor(integration.sessionClaimEmbedColor || '');
-    setEditSessionClaimEmbedDescription(integration.sessionClaimEmbedDescription || '');
-    setEditSessionClaimEmbedFooter(integration.sessionClaimEmbedFooter || '');
-    setEditSessionStartEmbedTitle(integration.sessionStartEmbedTitle || '');
-    setEditSessionStartEmbedColor(integration.sessionStartEmbedColor || '');
-    setEditSessionStartEmbedDescription(integration.sessionStartEmbedDescription || '');
-    setEditSessionStartEmbedFooter(integration.sessionStartEmbedFooter || '');
-
-    // Populate session review embed states
-    setEditSessionReviewEmbedTitle(integration.sessionReviewEmbedTitle || '');
-    setEditSessionReviewEmbedColor(integration.sessionReviewEmbedColor || '');
-    setEditSessionReviewEmbedDescription(integration.sessionReviewEmbedDescription || '');
-    setEditSessionReviewEmbedFooter(integration.sessionReviewEmbedFooter || '');
-
-    const savedPingRoles = { ...(integration.pingRoles || {}) } as Record<string, string>;
-    if (integration.sessionPingRoleId && !savedPingRoles['session']) {
-      savedPingRoles['session'] = integration.sessionPingRoleId;
-    }
-    setEditPingRoles(savedPingRoles);
+    setEditPingRoles({});
 
     setEditMode(true);
     setHasChanges(false);
@@ -682,35 +542,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
         noticeDenialEmbedColor: editNoticeDenialEmbedColor || null,
         noticeDenialEmbedDescription: editNoticeDenialEmbedDescription || null,
         noticeDenialEmbedFooter: editNoticeDenialEmbedFooter || null,
-        // Session notification fields
-        sessionChannelId: editSessionChannelId || null,
-        sessionChannelName: editSessionChannelId ? (sessionChannels.find(c => c.id === editSessionChannelId)?.name || null) : null,
-        sessionNotifyOnCreate: editSessionNotifyOnCreate,
-        sessionNotifyOnClaim: editSessionNotifyOnClaim,
-        sessionNotifyOnStart: editSessionNotifyOnStart,
-        sessionEmbedTitle: editSessionEmbedTitle || null,
-        sessionEmbedColor: editSessionEmbedColor || null,
-        sessionEmbedDescription: editSessionEmbedDescription || null,
-        sessionEmbedFooter: editSessionEmbedFooter || null,
-        sessionCreateEmbedTitle: editSessionCreateEmbedTitle || null,
-        sessionCreateEmbedColor: editSessionCreateEmbedColor || null,
-        sessionCreateEmbedDescription: editSessionCreateEmbedDescription || null,
-        sessionCreateEmbedFooter: editSessionCreateEmbedFooter || null,
-        sessionClaimEmbedTitle: editSessionClaimEmbedTitle || null,
-        sessionClaimEmbedColor: editSessionClaimEmbedColor || null,
-        sessionClaimEmbedDescription: editSessionClaimEmbedDescription || null,
-        sessionClaimEmbedFooter: editSessionClaimEmbedFooter || null,
-        sessionStartEmbedTitle: editSessionStartEmbedTitle || null,
-        sessionStartEmbedColor: editSessionStartEmbedColor || null,
-        sessionStartEmbedDescription: editSessionStartEmbedDescription || null,
-        sessionStartEmbedFooter: editSessionStartEmbedFooter || null,
-        // Session review embed templates
-        sessionReviewEmbedTitle: editSessionReviewEmbedTitle || null,
-        sessionReviewEmbedColor: editSessionReviewEmbedColor || null,
-        sessionReviewEmbedDescription: editSessionReviewEmbedDescription || null,
-        sessionReviewEmbedFooter: editSessionReviewEmbedFooter || null,
-        sessionPingRoleId: editPingRoles['session'] || null,
-        sessionPingRoleName: editPingRoles['session'] ? (discordRoles.find(r => r.id === editPingRoles['session'])?.name || null) : null,
         pingRoles: editPingRoles,
       });
 
@@ -847,55 +678,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
         </div>
       </div>
 
-      {/* Session Notifications */}
-      <div>
-        <h4 className="text-sm font-medium text-zinc-900 dark:text-white mb-2">Session Notifications</h4>
-        <div className="space-y-2">
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { key: 'create', label: 'On create', value: editSessionNotifyOnCreate, toggle: () => { setEditSessionNotifyOnCreate(!editSessionNotifyOnCreate); checkForChanges(); } },
-              { key: 'claim', label: 'On claim', value: editSessionNotifyOnClaim, toggle: () => { setEditSessionNotifyOnClaim(!editSessionNotifyOnClaim); checkForChanges(); } },
-              { key: 'start', label: 'On start', value: editSessionNotifyOnStart, toggle: () => { setEditSessionNotifyOnStart(!editSessionNotifyOnStart); checkForChanges(); } },
-            ].map(item => (
-              <div
-                key={item.key}
-                onClick={item.toggle}
-                className={`px-3 py-2 rounded-lg border text-sm text-center transition-colors cursor-pointer hover:opacity-80 ${
-                  item.value
-                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-medium'
-                    : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500'
-                }`}
-              >
-                {item.label}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Session Channel */}
-      <div>
-        <h4 className="text-sm font-medium text-zinc-900 dark:text-white mb-2">Session Channel</h4>
-        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
-          <div className="flex items-center gap-2.5">
-            <IconCalendarEvent className="w-4 h-4 text-zinc-400" />
-            <p className="text-sm font-medium text-zinc-900 dark:text-white">Channel</p>
-          </div>
-          <select
-            value={editSessionChannelId}
-            onChange={(e) => { setEditSessionChannelId(e.target.value); checkForChanges(); }}
-            onFocus={fetchSessionChannels}
-            className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white text-sm min-w-[180px]"
-          >
-            <option value="">Using main channel</option>
-            {loadingSessionChannels && <option disabled>Loading channels...</option>}
-            {sessionChannels.map(ch => (
-              <option key={ch.id} value={ch.id}>#{ch.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {/* Remove integration */}
       <div>
         <h4 className="text-sm font-medium text-zinc-900 dark:text-white mb-2">Danger Zone</h4>
@@ -970,10 +752,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
     { key: 'notice-submit', label: 'Notice', icon: IconFileText, target: 'dm' as const },
     { key: 'notice-approval', label: 'Approved', icon: IconCircleCheck, target: 'dm' as const },
     { key: 'notice-denial', label: 'Denied', icon: IconCircleX, target: 'dm' as const },
-    { key: 'session-create', label: 'Created', icon: IconCalendarEvent, target: 'channel' as const },
-    { key: 'session-claim', label: 'Claimed', icon: IconCalendarEvent, target: 'channel' as const },
-    { key: 'session-start', label: 'Started', icon: IconCalendarEvent, target: 'channel' as const },
-    { key: 'session-review', label: 'Review', icon: IconClipboardCheck, target: 'dm' as const },
   ];
 
   const getEmbedValues = (cat: string) => {
@@ -987,11 +765,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
       case 'notice-submit': return { title: editNoticeSubmitEmbedTitle, color: editNoticeSubmitEmbedColor || '#3b82f6', description: editNoticeSubmitEmbedDescription, footer: editNoticeSubmitEmbedFooter };
       case 'notice-approval': return { title: editNoticeApprovalEmbedTitle, color: editNoticeApprovalEmbedColor || '#10b981', description: editNoticeApprovalEmbedDescription, footer: editNoticeApprovalEmbedFooter };
       case 'notice-denial': return { title: editNoticeDenialEmbedTitle, color: editNoticeDenialEmbedColor || '#ef4444', description: editNoticeDenialEmbedDescription, footer: editNoticeDenialEmbedFooter };
-      case 'session': return { title: editSessionEmbedTitle, color: editSessionEmbedColor || '#3b82f6', description: editSessionEmbedDescription, footer: editSessionEmbedFooter };
-      case 'session-create': return { title: editSessionCreateEmbedTitle, color: editSessionCreateEmbedColor || '#10b981', description: editSessionCreateEmbedDescription, footer: editSessionCreateEmbedFooter };
-      case 'session-claim': return { title: editSessionClaimEmbedTitle, color: editSessionClaimEmbedColor || '#f59e0b', description: editSessionClaimEmbedDescription, footer: editSessionClaimEmbedFooter };
-      case 'session-start': return { title: editSessionStartEmbedTitle, color: editSessionStartEmbedColor || '#3b82f6', description: editSessionStartEmbedDescription, footer: editSessionStartEmbedFooter };
-      case 'session-review': return { title: editSessionReviewEmbedTitle, color: editSessionReviewEmbedColor || '#5865F2', description: editSessionReviewEmbedDescription, footer: editSessionReviewEmbedFooter };
       default: return { title: '', color: '#5865F2', description: '', footer: '' };
     }
   };
@@ -1007,11 +780,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
       'notice-submit': { title: setEditNoticeSubmitEmbedTitle, color: setEditNoticeSubmitEmbedColor, description: setEditNoticeSubmitEmbedDescription, footer: setEditNoticeSubmitEmbedFooter },
       'notice-approval': { title: setEditNoticeApprovalEmbedTitle, color: setEditNoticeApprovalEmbedColor, description: setEditNoticeApprovalEmbedDescription, footer: setEditNoticeApprovalEmbedFooter },
       'notice-denial': { title: setEditNoticeDenialEmbedTitle, color: setEditNoticeDenialEmbedColor, description: setEditNoticeDenialEmbedDescription, footer: setEditNoticeDenialEmbedFooter },
-      'session': { title: setEditSessionEmbedTitle, color: setEditSessionEmbedColor, description: setEditSessionEmbedDescription, footer: setEditSessionEmbedFooter },
-      'session-create': { title: setEditSessionCreateEmbedTitle, color: setEditSessionCreateEmbedColor, description: setEditSessionCreateEmbedDescription, footer: setEditSessionCreateEmbedFooter },
-      'session-claim': { title: setEditSessionClaimEmbedTitle, color: setEditSessionClaimEmbedColor, description: setEditSessionClaimEmbedDescription, footer: setEditSessionClaimEmbedFooter },
-      'session-start': { title: setEditSessionStartEmbedTitle, color: setEditSessionStartEmbedColor, description: setEditSessionStartEmbedDescription, footer: setEditSessionStartEmbedFooter },
-      'session-review': { title: setEditSessionReviewEmbedTitle, color: setEditSessionReviewEmbedColor, description: setEditSessionReviewEmbedDescription, footer: setEditSessionReviewEmbedFooter },
     };
     setters[cat]?.[field]?.(value);
     if (cat !== 'general') checkForChanges();
@@ -1031,8 +799,6 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
     if (cat === 'general') return ['{action}', '{user}', '{username}'];
     if (cat === 'birthday') return ['{user}', '{username}', '{workspace}'];
     if (cat.startsWith('notice')) return ['{username}', '{userId}', '{workspace}', '{reason}', '{startDate}', '{endDate}', ...(cat !== 'notice-submit' ? ['{reviewedBy}', '{reviewComment}'] : [])];
-    if (cat === 'session-review') return ['{username}', '{workspace}', '{duration}', '{activeTime}', '{idleTime}', '{messages}', '{sessionMessage}'];
-    if (cat === 'session' || cat.startsWith('session-')) return ['{sessionName}', '{host}', '{date}', '{type}', '{duration}', '{sessionTypeName}', '{workspace}'];
     return ['{user}', '{username}', '{workspace}', '{reason}', '{issuedBy}', ...(cat !== 'warning' ? ['{newRank}', '{oldRank}'] : [])];
   };
 
@@ -1128,7 +894,7 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
                             setShowRoleMention(true);
                             setMentionFilter(filterText.toLowerCase());
                             setMentionStartPos(lastAtIndex);
-                            if (discordRoles.length === 0) fetchSessionChannels();
+                            if (discordRoles.length === 0) fetchDiscordRoles();
                             return;
                           }
                         }
@@ -1303,15 +1069,11 @@ const DiscordIntegration: FC<{ triggerToast?: any }> = ({ triggerToast }) => {
     if (integration && !editMode) {
       enterEditMode();
     }
-    // Fetch session channels if a session channel is configured
-    if (integration && (integration.sessionChannelId || integration.sessionNotifyOnCreate || integration.sessionNotifyOnClaim || integration.sessionNotifyOnStart)) {
-      fetchSessionChannels();
-    }
   }, [integration]);
 
   useEffect(() => {
     if (activeTab === 'embeds' && integration && discordRoles.length === 0) {
-      fetchSessionChannels();
+      fetchDiscordRoles();
     }
   }, [activeTab, embedCategory]);
 

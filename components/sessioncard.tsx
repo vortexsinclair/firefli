@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   IconX,
-  IconCalendarEvent,
   IconClock,
   IconNotes,
   IconHistory,
@@ -22,7 +21,6 @@ import type { SessionColors } from "@/hooks/useSessionColors";
 import { canAssignUsers, canClaimSelf } from "@/utils/sessionPermissions";
 import { Listbox } from "@headlessui/react";
 
-// Mobile detection utility
 const isMobile = () => {
   if (typeof window === 'undefined') return false;
   return window.innerWidth <= 768;
@@ -67,6 +65,7 @@ interface SessionModalProps {
   workspaceMembers: any[];
   canManage: boolean;
   canAddNotes?: boolean;
+  canEditConcluded?: boolean;
   sessionColors?: SessionColors;
   colorsReady?: boolean | undefined;
   currentUserRankId?: number | null;
@@ -82,6 +81,7 @@ const SessionModal: React.FC<SessionModalProps> = ({
   workspaceMembers,
   canManage,
   canAddNotes,
+  canEditConcluded,
   sessionColors,
   colorsReady,
   currentUserRankId,
@@ -93,6 +93,7 @@ const SessionModal: React.FC<SessionModalProps> = ({
   const [selectedTag, setSelectedTag] = useState<string | null>(
     session.sessionTagId || null
   );
+  const [gameThumbnail, setGameThumbnail] = useState<string | null>(null);
   const router = useRouter();
   const login = useRecoilValue(loginState);
   const workspace = useRecoilValue(workspacestate);
@@ -220,6 +221,21 @@ const SessionModal: React.FC<SessionModalProps> = ({
   useEffect(() => {
     setSelectedTag(session.sessionTagId || null);
   }, [session.sessionTagId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setGameThumbnail(null);
+    const placeId = session.sessionType?.gameId;
+    if (!placeId || !workspaceId) return;
+    let cancelled = false;
+    axios
+      .get(`/api/workspace/${workspaceId}/sessions/game-thumbnail?placeId=${placeId}`)
+      .then((res) => {
+        if (!cancelled) setGameThumbnail(res.data?.thumbnailUrl || null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen, session.sessionType?.gameId, workspaceId]);
 
   const handleTagAssignment = async (tagId: string | null) => {
     try {
@@ -428,7 +444,7 @@ const SessionModal: React.FC<SessionModalProps> = ({
   if (colorsReady === false) {
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-x-hidden"
+        className="fixed inset-0 bg-black/25 flex items-center justify-center z-50 p-2 sm:p-4 overflow-x-hidden"
         onClick={(e) => {
           if (e.target === e.currentTarget && !isMobile()) {
             onClose();
@@ -498,217 +514,219 @@ const SessionModal: React.FC<SessionModalProps> = ({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center sm:pt-16"
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isMobile()) {
           onClose();
         }
       }}
     >
-        <div className="bg-white dark:bg-zinc-800 rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl overflow-y-auto overflow-x-hidden fixed top-12 bottom-16 left-0 right-0 sm:relative sm:inset-auto sm:h-auto sm:max-h-[90vh] sm:mx-4 lg:mx-auto">
-        <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-zinc-700 gap-3">
-          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <IconCalendarEvent className="w-5 h-5 text-primary" />
+      <div className="bg-white dark:bg-zinc-900 rounded-none sm:rounded-xl shadow-2xl w-full max-w-3xl overflow-x-hidden fixed top-12 bottom-16 left-0 right-0 sm:relative sm:inset-auto sm:h-auto sm:max-h-[90vh] sm:mx-4 lg:mx-auto" style={{ overflowY: 'overlay' as any }}>
+        <div className="relative h-44 sm:h-52 overflow-hidden rounded-t-none sm:rounded-t-xl flex-shrink-0">
+          <div className="absolute inset-0 bg-zinc-800" />
+          {gameThumbnail && (
+            <div
+              className="absolute inset-0 bg-cover bg-center scale-105 transition-opacity duration-500"
+              style={{ backgroundImage: `url(${gameThumbnail})` }}
+            />
+          )}
+          <div className="absolute inset-0 backdrop-blur-[2px] bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+          <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {session.type && (
+                <span
+                  className={`${getSessionTypeColor(session.type)} ${getTextColorForBackground(getSessionTypeColor(session.type))} px-2.5 py-1 rounded text-xs font-semibold shadow`}
+                >
+                  {session.type.charAt(0).toUpperCase() + session.type.slice(1)}
+                </span>
+              )}
+              {isRecurring && (
+                <span
+                  className={`${getRecurringColor()} ${getTextColorForBackground(getRecurringColor())} px-2.5 py-1 rounded text-xs font-semibold shadow`}
+                >
+                  Recurring
+                </span>
+              )}
+              {isActive && (
+                <span className="bg-emerald-500 text-white px-2.5 py-1 rounded text-xs font-semibold shadow animate-pulse">
+                  • LIVE
+                </span>
+              )}
+              {isConcluded && (
+                <span className="bg-zinc-700/80 text-zinc-200 px-2.5 py-1 rounded text-xs font-semibold shadow">
+                  Concluded
+                </span>
+              )}
+              {!isConcluded && currentStatus && currentStatus !== "Open" && (
+                <span className="bg-blue-500/80 text-white px-2.5 py-1 rounded text-xs font-semibold shadow">
+                  {currentStatus}
+                </span>
+              )}
             </div>
-            <div className="min-w-0">
-              <h2 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-white break-words">
-                {session.name || session.sessionType.name}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                <IconClock className="w-4 h-4" />
+            <button
+              onClick={onClose}
+              className="p-1.5 bg-black/35 rounded-full text-white hover:bg-black/60 transition-colors flex-shrink-0"
+            >
+              <IconX className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-white drop-shadow mb-1 leading-tight">
+              {session.name || session.sessionType.name}
+            </h2>
+            <div className="flex items-center gap-1.5 text-sm text-white/75 mb-1">
+              <IconClock className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>
                 {sessionDate.toLocaleDateString()} at{" "}
                 {sessionDate.toLocaleTimeString(undefined, {
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: true,
                 })}
-                {isActive && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 animate-pulse">
-                    • LIVE
-                  </span>
-                )}
-                {isRecurring && (
-                  <span
-                    className={`${getRecurringColor()} ${getTextColorForBackground(
-                      getRecurringColor()
-                    )} px-2 py-1 rounded text-xs font-medium`}
-                  >
-                    Recurring
-                  </span>
-                )}
-                {session.type && (
-                  <span
-                    className={`${getSessionTypeColor(
-                      session.type
-                    )} ${getTextColorForBackground(
-                      getSessionTypeColor(session.type)
-                    )} px-2 py-1 rounded text-xs font-medium`}
-                  >
-                    {session.type.charAt(0).toUpperCase() +
-                      session.type.slice(1)}
-                  </span>
-                )}
-                {isConcluded && (
-                  <span className="bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400 px-2 py-1 rounded text-xs font-medium">
-                    Concluded
-                  </span>
-                )}
-                {!isConcluded && currentStatus && currentStatus !== "Open" && (
-                  <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
-                    {currentStatus}
-                  </span>
-                )}
-              </div>
+              </span>
             </div>
+            {session.sessionType.description && (
+              <p className="text-white/65 text-sm leading-snug line-clamp-2">
+                {session.sessionType.description.replace(/[#*`_~[\]]/g, "").slice(0, 160)}
+              </p>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors flex-shrink-0"
-          >
-            <IconX className="w-5 h-5" />
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-6">
-          {session.sessionType.description && (
-            <div>
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-3">
-                Description
-              </h3>
-              <div className="bg-zinc-50 dark:bg-zinc-700/30 rounded-lg p-4">
-                <div className="prose text-zinc-700 dark:text-zinc-300 dark:prose-invert max-w-none">
-                  <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                    {session.sessionType.description}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          )}
 
-          <div>
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-3">
-              Role Claims
-            </h3>
-            <div className="space-y-3">
-              {session.sessionType.slots &&
-                Array.isArray(session.sessionType.slots) &&
-                session.sessionType.slots.length > 0 &&
-                (() => {
-                  const slots: any[] = session.sessionType.slots;
-                  const UNCATEGORISED = "__uncategorised__";
-                  const catMap = new Map<string, any[]>();
-                  const uncategorised: any[] = [];
-                  for (const slot of slots) {
-                    if (typeof slot !== "object") continue;
-                    if (slot.categoryId) {
-                      if (!catMap.has(slot.categoryId)) catMap.set(slot.categoryId, []);
-                      catMap.get(slot.categoryId)!.push(slot);
-                    } else {
-                      uncategorised.push(slot);
+          {session.sessionType.slots &&
+            Array.isArray(session.sessionType.slots) &&
+            session.sessionType.slots.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3">
+                  Assignments
+                </h3>
+
+                <div className="space-y-3">
+                  {(() => {
+                    const slots: any[] = session.sessionType.slots;
+                    const catMap = new Map<string, any[]>();
+                    const uncategorised: any[] = [];
+                    for (const slot of slots) {
+                      if (typeof slot !== "object") continue;
+                      if (slot.categoryId) {
+                        if (!catMap.has(slot.categoryId)) catMap.set(slot.categoryId, []);
+                        catMap.get(slot.categoryId)!.push(slot);
+                      } else {
+                        uncategorised.push(slot);
+                      }
                     }
-                  }
-                  const sortedCategories = [...catMap.entries()]
-                    .map(([catId, catSlots]) => [catId, [...catSlots].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0))] as [string, any[]])
-                    .sort(([, a], [, b]) => (a[0]?.categoryWeight ?? 0) - (b[0]?.categoryWeight ?? 0));
+                    const sortedCategories = [...catMap.entries()]
+                      .map(([catId, catSlots]) => [catId, [...catSlots].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0))] as [string, any[]])
+                      .sort(([, a], [, b]) => (a[0]?.categoryWeight ?? 0) - (b[0]?.categoryWeight ?? 0));
 
-                  const renderSlot = (slot: any, slotIdx: number) => {
-                    const slotData = JSON.parse(JSON.stringify(slot));
-                    const slotGroupRoles: number[] = Array.isArray(slotData.groupRoles) ? slotData.groupRoles : [];
-                    const hasRoleRestriction = slotGroupRoles.length > 0;
-                    const currentUserEligible = !hasRoleRestriction || (currentUserRankId != null && slotGroupRoles.includes(currentUserRankId));
-                    return (
-                      <div key={slotIdx} className="bg-zinc-50 dark:bg-zinc-700/30 rounded-lg p-4 mb-3">
-                        <h4 className="text-sm font-medium text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
-                          {slotData.name}
-                        </h4>
-                        <div className="space-y-2">
-                          {Array.from(Array(slotData.slots)).map((_, i) => {
-                            const assignedUser = session.users?.find(
-                              (u: any) => u.roleID === slotData.id && u.slot === i
-                            );
-                            const { username, picture: userPicture, userId: assignedUserId } = getAssignedDisplay(assignedUser);
-                            return (
-                              <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <span className="text-sm text-zinc-600 dark:text-zinc-400 sm:w-16 sm:flex-shrink-0">Slot {i + 1}:</span>
-                                <div className="flex-1 min-w-0">
-                                  <RoleButton
-                                    currentValue={username || ""}
-                                    onValueChange={(value) => handleSlotClaim(slotData.id, i, value)}
-                                    isSubmitting={isSubmitting}
-                                    canEdit={
-                                      canManage ||
-                                      canAssignUsers(workspace.yourPermission, session.type) ||
-                                      workspace.yourPermission.includes("admin") ||
-                                      canClaimSelf(workspace.yourPermission, session.type) ||
-                                      workspace.yourPermission.includes("admin")
-                                    }
-                                    availableUsers={availableUsers}
-                                    currentUserId={login.userId}
-                                    currentUserPicture={login.thumbnail}
-                                    currentUserUsername={login.username}
-                                    assignedUserPicture={userPicture}
-                                    assignedUserId={assignedUserId}
-                                    workspace={workspace}
-                                    isHostRole={!!(slotData.hostRole)}
-                                    sessionType={session.type}
-                                    eligibleGroupRoles={slotGroupRoles}
-                                    currentUserRankId={currentUserRankId ?? null}
-                                  />
+                    const renderSlot = (slot: any, slotIdx: number) => {
+                      const slotData = JSON.parse(JSON.stringify(slot));
+                      const slotGroupRoles: number[] = Array.isArray(slotData.groupRoles) ? slotData.groupRoles : [];
+                      return (
+                        <div key={slotIdx} className="bg-zinc-50 dark:bg-zinc-800/60 rounded-lg p-4 mb-3">
+                          <h4 className="text-sm font-medium text-zinc-900 dark:text-white mb-2">
+                            {slotData.name}
+                          </h4>
+                          <div className="space-y-2">
+                            {Array.from(Array(slotData.slots)).map((_, i) => {
+                              const assignedUser = session.users?.find(
+                                (u: any) => u.roleID === slotData.id && u.slot === i
+                              );
+                              const { username, picture: userPicture, userId: assignedUserId } = getAssignedDisplay(assignedUser);
+                              return (
+                                <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                  <span className="text-sm text-zinc-500 dark:text-zinc-400 sm:w-16 sm:flex-shrink-0">
+                                    Slot {i + 1}:
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <RoleButton
+                                      currentValue={username || ""}
+                                      onValueChange={(value) => handleSlotClaim(slotData.id, i, value)}
+                                      isSubmitting={isSubmitting}
+                                      canEdit={
+                                        (!isConcluded || !!canEditConcluded) &&
+                                        (
+                                          canManage ||
+                                          canAssignUsers(workspace.yourPermission, session.type) ||
+                                          workspace.yourPermission.includes("admin") ||
+                                          canClaimSelf(workspace.yourPermission, session.type)
+                                        )
+                                      }
+                                      availableUsers={availableUsers}
+                                      currentUserId={login.userId}
+                                      currentUserPicture={login.thumbnail}
+                                      currentUserUsername={login.username}
+                                      assignedUserPicture={userPicture}
+                                      assignedUserId={assignedUserId}
+                                      workspace={workspace}
+                                      isHostRole={!!(slotData.hostRole)}
+                                      sessionType={session.type}
+                                      eligibleGroupRoles={slotGroupRoles}
+                                      currentUserRankId={currentUserRankId ?? null}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <>
-                      {sortedCategories.map(([catId, catSlots]) => (
-                        <div key={catId}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                              {catSlots[0]?.categoryName}
-                            </span>
-                            <div className="flex-1 border-t border-zinc-200 dark:border-zinc-700" />
+                              );
+                            })}
                           </div>
-                          {catSlots.map((slot, idx) => renderSlot(slot, idx))}
                         </div>
-                      ))}
-                      {uncategorised.length > 0 && (
-                        <div>
-                          {sortedCategories.length > 0 && (
-                            <div className="flex items-center gap-2 mb-2 mt-1">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Other</span>
+                      );
+                    };
+
+                    return (
+                      <>
+                        {sortedCategories.map(([catId, catSlots]) => (
+                          <div key={catId}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                                {catSlots[0]?.categoryName}
+                              </span>
                               <div className="flex-1 border-t border-zinc-200 dark:border-zinc-700" />
                             </div>
-                          )}
-                          {[...uncategorised].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)).map((slot, idx) => renderSlot(slot, idx))}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-            </div>
-          </div>
+                            {catSlots.map((slot, idx) => renderSlot(slot, idx))}
+                          </div>
+                        ))}
+                        {uncategorised.length > 0 && (
+                          <div>
+                            {sortedCategories.length > 0 && (
+                              <div className="flex items-center gap-2 mb-2 mt-1">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Other</span>
+                                <div className="flex-1 border-t border-zinc-200 dark:border-zinc-700" />
+                              </div>
+                            )}
+                            {[...uncategorised].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)).map((slot, idx) => renderSlot(slot, idx))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+          {/* Session Tag */}
           {(() => {
             const sessionType = session.type || "other";
             const canAssignTag =
-              canManage ||
-              workspace.isAdmin ||
-              workspace.yourPermission?.includes(`sessions_${sessionType}_assign_tag`) ||
-              workspace.yourPermission?.includes("admin");
+              (!isConcluded || !!canEditConcluded) &&
+              (
+                canManage ||
+                workspace.isAdmin ||
+                workspace.yourPermission?.includes(`sessions_${sessionType}_assign_tag`) ||
+                workspace.yourPermission?.includes("admin")
+              );
             if (!canAssignTag) return null;
 
             return (
               <div>
-                <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3">
                   Session Tag
                 </h3>
-                <div className="bg-zinc-50 dark:bg-zinc-700/30 rounded-lg p-4">
+                <div className="bg-zinc-50 dark:bg-zinc-800/60 rounded-lg p-4">
                   <div className="flex items-center gap-3">
                     <IconTag className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                     <div className="flex-1">
@@ -721,14 +739,12 @@ const SessionModal: React.FC<SessionModalProps> = ({
                                 : "No tag"}
                             </span>
                             {selectedTag && (
-                              <span
-                                className={`absolute inset-y-0 right-10 flex items-center pr-2`}
-                              >
+                              <span className="absolute inset-y-0 right-10 flex items-center pr-2">
                                 <span
                                   className={`w-3 h-3 rounded-full ${
                                     availableTags.find((t) => t.id === selectedTag)?.color || "bg-zinc-300"
                                   }`}
-                                ></span>
+                                />
                               </span>
                             )}
                           </Listbox.Button>
@@ -737,19 +753,13 @@ const SessionModal: React.FC<SessionModalProps> = ({
                               value={null}
                               className={({ active }) =>
                                 `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                  active
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-zinc-900 dark:text-white"
+                                  active ? "bg-primary/10 text-primary" : "text-zinc-900 dark:text-white"
                                 }`
                               }
                             >
                               {({ selected }) => (
                                 <>
-                                  <span
-                                    className={`block truncate dark:text-white ${
-                                      selected ? "font-medium" : "font-normal"
-                                    }`}
-                                  >
+                                  <span className={`block truncate dark:text-white ${selected ? "font-medium" : "font-normal"}`}>
                                     No tag
                                   </span>
                                   {selected && (
@@ -767,47 +777,39 @@ const SessionModal: React.FC<SessionModalProps> = ({
                                   tag.allowedTypes.includes(session.type || "other")
                               )
                               .map((tag) => (
-                              <Listbox.Option
-                                key={tag.id}
-                                value={tag.id}
-                                className={({ active }) =>
-                                  `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                    active
-                                      ? "bg-primary/10 text-primary"
-                                      : "text-zinc-900 dark:text-white"
-                                  }`
-                                }
-                              >
-                                {({ selected }) => (
-                                  <>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className={`w-3 h-3 rounded-full ${tag.color}`}
-                                      ></span>
-                                      <span
-                                        className={`block truncate dark:text-white ${
-                                          selected ? "font-medium" : "font-normal"
-                                        }`}
-                                      >
-                                        {tag.name}
-                                      </span>
-                                    </div>
-                                    {selected && (
-                                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
-                                        <IconUserCheck className="w-5 h-5" />
-                                      </span>
-                                    )}
-                                  </>
-                                )}
-                              </Listbox.Option>
-                            ))}
+                                <Listbox.Option
+                                  key={tag.id}
+                                  value={tag.id}
+                                  className={({ active }) =>
+                                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+                                      active ? "bg-primary/10 text-primary" : "text-zinc-900 dark:text-white"
+                                    }`
+                                  }
+                                >
+                                  {({ selected }) => (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <span className={`w-3 h-3 rounded-full ${tag.color}`} />
+                                        <span className={`block truncate dark:text-white ${selected ? "font-medium" : "font-normal"}`}>
+                                          {tag.name}
+                                        </span>
+                                      </div>
+                                      {selected && (
+                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                                          <IconUserCheck className="w-5 h-5" />
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </Listbox.Option>
+                              ))}
                           </Listbox.Options>
                         </div>
                       </Listbox>
                     </div>
                   </div>
                   <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    Assign a tag to categorise this training session
+                    Assign a tag to categorise this session
                   </p>
                 </div>
               </div>
@@ -816,7 +818,7 @@ const SessionModal: React.FC<SessionModalProps> = ({
 
           <NotesSection
             sessionId={session.id}
-            canManage={canAddNotes ?? canManage}
+            canManage={(canAddNotes ?? canManage) && (!isConcluded || !!canEditConcluded)}
             currentUser={login}
             refreshKey={refreshKey}
             onDataChange={refreshSessionData}
@@ -914,7 +916,6 @@ const AutocompleteInput: React.FC<{
     
     if (inputValue.trim() === "") {
       const isCurrentUserAssigned = assignedUserId === currentUserId.toString();
-      // Only show self as a suggestion if they are eligible for this slot
       if (currentUserUsername && !isCurrentUserAssigned && (currentUserEligible || userHasAssignPermission)) {
         suggestions.push({
           userid: currentUserId.toString(),
@@ -973,8 +974,6 @@ const AutocompleteInput: React.FC<{
     if (!targetUser) return false;
     const isAssigningToSelf = targetUser.userid.toString() === currentUserId.toString();
     
-    // Eligibility check: non-admins assigning to self must be eligible
-    // Rank restriction only applies to self-claims without assign permission
     if (isAssigningToSelf && !hasAssignPermission && !currentUserEligible) {
       return false;
     }
@@ -1179,7 +1178,7 @@ const AutocompleteInput: React.FC<{
       onClick={() => {
         if (!isSubmitting && actualCanEdit) setIsEditing(true);
       }}
-      className="w-full px-4 py-2 text-left bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 outline-none"
+      className="w-full px-4 py-2 text-left bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 outline-none"
     >
       <div className="flex items-center gap-2 w-full">
         <div className="flex items-center flex-1">

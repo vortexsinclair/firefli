@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
 import { withSessionRoute } from "@/lib/withSession";
-import { sendSessionNotification } from "@/utils/session-notification";
 
 const sessionCreationLimits: { [key: string]: { count: number; resetTime: number } } = {};
 
@@ -106,16 +105,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   const isAdmin = membership?.isAdmin || false;
   const userRole = user?.roles?.[0];
   const requiredPermission = `sessions_${type}_scheduled`;
-
-  console.log('[create-scheduled] Debug:', {
-    userId: userId.toString(),
-    type,
-    requiredPermission,
-    isAdmin,
-    hasRole: !!userRole,
-    permissions: userRole?.permissions || [],
-    hasPermission: userRole?.permissions.includes(requiredPermission)
-  });
 
   if (!isAdmin && (!userRole || !userRole.permissions.includes(requiredPermission))) {
     return res.status(403).json({ 
@@ -271,18 +260,6 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       const { logAudit } = await import('@/utils/logs');
       await logAudit(Number(req.query.id), Number(req.session.userid), 'session.create.scheduled', `session_bulk:${sessionType.id}`, { count: createdSessions.length, sessionType: sessionType.name });
     } catch (e) {}
-
-    if (createdSessions.length > 0) {
-      sendSessionNotification(workspaceId, 'create', {
-        id: createdSessions[0].id,
-        name,
-        type,
-        date: createdSessions[0].date,
-        duration: duration || 30,
-        hostUserId: null,
-        sessionTypeName: sessionType.name,
-      }).catch(() => {});
-    }
 
     res.status(200).json({
       success: true,

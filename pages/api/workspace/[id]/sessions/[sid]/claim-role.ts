@@ -112,24 +112,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     const slotName = matchingSlot?.name?.toLowerCase() || '';
     const isHostRole = !!(matchingSlot?.hostRole);
 
-    console.log('[claim-role] Permission check:', {
-      sessionType: session.type,
-      type,
-      isAdmin,
-      userPermissions,
-      requiredAssign: `sessions_${type}_assign`,
-      requiredClaim: `sessions_${type}_claim`,
-      hasAssignPermission,
-      hasClaimPermission,
-      isAssigningToSelf,
-      isHostRole,
-      slotName,
-      roleId,
-      userId,
-      currentUserId,
-      action,
-    });
-
     if (action === "unclaim") {
       const existingAssignment = await prisma.sessionUser.findFirst({
         where: {

@@ -51,6 +51,9 @@
           Communicate with your members directly in Firefli
         </li>
         <li>
+          Announce sessions in your Discord community
+        </li>
+        <li>
           Recommend members for rank promotions
         </li>
         <li>

@@ -55,6 +55,7 @@ export default withPermissionCheck(
         userAssignments,
         timezoneOffset,
         statues,
+        gameId,
       } = req.body;
       if (!date) {
         return res.status(400).json({ error: "Session date is required" });
@@ -117,6 +118,14 @@ export default withPermissionCheck(
           await prisma.sessionType.update({
             where: { id: currentSession.sessionTypeId },
             data: { description: description || null },
+          });
+        }
+
+        // Update session type gameId if provided
+        if (gameId !== undefined) {
+          await prisma.sessionType.update({
+            where: { id: currentSession.sessionTypeId },
+            data: { gameId: gameId ? BigInt(gameId as string) : null },
           });
         }
 

@@ -103,6 +103,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       universeId: session.universeId ? Number(session.universeId) : null,
     }))
 
+    const adjustmentWhere: any = {
+      workspaceGroupId: workspaceId,
+      userId: BigInt(userId as string),
+      archived: { not: true },
+    }
+
+    if (startDate || endDate) {
+      adjustmentWhere.createdAt = {}
+      if (startDate) adjustmentWhere.createdAt.gte = new Date(startDate as string)
+      if (endDate) adjustmentWhere.createdAt.lte = new Date(endDate as string)
+    }
+
+    const adjustments = await prisma.activityAdjustment.findMany({
+      where: adjustmentWhere,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        actor: {
+          select: { username: true },
+        },
+      },
+    })
+
+    const totalAdjustmentMinutes = adjustments.reduce((total, adj) => total + adj.minutes, 0)
+
+    const formattedAdjustments = adjustments.map((adj) => ({
+      id: adj.id,
+      minutes: adj.minutes,
+      reason: adj.reason,
+      actorUsername: adj.actor?.username ?? null,
+      createdAt: adj.createdAt,
+    }))
+
     // Get inactivity notices
     const notices = await prisma.inactivityNotice.findMany({
       where: {
@@ -136,8 +170,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       activity: {
         sessions: formattedSessions,
         totalSessions: formattedSessions.length,
-        totalActivityTime,
+        totalActivityTime: totalActivityTime + totalAdjustmentMinutes * 60,
         averageSessionLength,
+        adjustments: formattedAdjustments,
         notices: formattedNotices,
       },
     })

@@ -154,11 +154,14 @@ const Activity: pageWithLayout = () => {
         }
 
         if (sessionHistoryData.length > 0) {
+          const now = new Date();
           timelineData.push(
-            ...sessionHistoryData.map((s: any) => ({
-              ...s,
-              __type: "sessionEntry",
-            }))
+            ...sessionHistoryData
+              .filter((s: any) => new Date(s.date) <= now)
+              .map((s: any) => ({
+                ...s,
+                __type: "sessionEntry",
+              }))
           );
         }
 
@@ -897,7 +900,7 @@ const Activity: pageWithLayout = () => {
                         alt="Game thumbnail"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                      <div className="absolute inset-0 bg-black/20"></div>
                     </div>
                   )}
                   <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
