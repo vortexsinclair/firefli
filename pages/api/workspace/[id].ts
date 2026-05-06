@@ -5,7 +5,7 @@ import prisma, { role } from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
+import { getGroupInfo, getGroupLogo } from '@/utils/roblox';
 
 type Data = {
 	success: boolean
@@ -76,8 +76,8 @@ export async function handler(
 				workspaceGroupId: workspace.groupId
 			}
 		}),
-		noblox.getGroup(Number(workspace.groupId)),
-		noblox.getLogo(Number(workspace.groupId)),
+		getGroupInfo(Number(workspace.groupId)).catch(() => null) as any,
+		getGroupLogo(Number(workspace.groupId)),
 		prisma.user.findUnique({
 			where: {
 				userid: req.session.userid

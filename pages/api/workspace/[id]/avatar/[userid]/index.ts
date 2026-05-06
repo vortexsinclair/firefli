@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs/promises';
 import path from 'path';
 import axios from 'axios';
-import noblox from 'noblox.js';
+import { getPlayerThumbnails } from '@/utils/roblox';
 import { createHash } from 'crypto';
 
 // In-memory LRU cache (very lightweight)
@@ -137,7 +137,7 @@ async function triggerBackgroundRefresh(userId: number, filePath: string, cacheK
 
 async function getRemoteAvatarUrl(userid: number): Promise<string> {
   try {
-    const thumbnails = await noblox.getPlayerThumbnail([userid], 180, 'png', false, 'headshot');
+    const thumbnails = await getPlayerThumbnails([userid], '180x180');
     if (thumbnails && thumbnails[0]?.imageUrl) return thumbnails[0].imageUrl;
   } catch {}
   return `https://www.roblox.com/headshot-thumbnail/image?userId=${userid}&width=180&height=180&format=png`;

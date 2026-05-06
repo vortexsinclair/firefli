@@ -9,7 +9,7 @@ import {
   getDisplayName,
 } from "@/utils/userinfoEngine";
 import { getConfig } from "@/utils/configEngine";
-import noblox from "noblox.js";
+import { getGroupRoles } from "@/utils/roblox";
 
 const activityUsersCache = new Map<string, { data: any; timestamp: number }>();
 const ACTIVITY_CACHE_DURATION = 60000; // Increase from 30s to 60s
@@ -89,7 +89,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       orderBy: { resetAt: "desc" },
     }),
     getConfig("activity", workspaceId),
-    noblox.getRoles(workspaceId).catch(() => [])
+    getGroupRoles(workspaceId)
   ]);
 
   const startDate = lastReset?.resetAt || new Date("2025-01-01");
@@ -310,7 +310,7 @@ async function fetchActivityData(workspaceId: number) {
       orderBy: { resetAt: "desc" },
     }),
     getConfig("activity", workspaceId),
-    noblox.getRoles(workspaceId).catch(() => [])
+    getGroupRoles(workspaceId)
   ]);
 
   const startDate = lastReset?.resetAt || new Date("2025-01-01");

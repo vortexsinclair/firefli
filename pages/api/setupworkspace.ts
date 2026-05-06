@@ -7,7 +7,7 @@ import {
 } from "@/utils/userinfoEngine";
 import { User } from "@/types/index.d";
 import prisma from "@/utils/database";
-import * as noblox from "noblox.js";
+import { getGroupLogo, getGroupInfo } from "@/utils/roblox";
 import { withSessionRoute } from "@/lib/withSession";
 import bcryptjs from "bcryptjs";
 import { setRegistry } from "@/utils/registryManager";
@@ -122,8 +122,8 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
     try {
       const [logo, group] = await Promise.all([
-        noblox.getLogo(groupIdNumber).catch(() => ""),
-        noblox.getGroup(groupIdNumber).catch(() => null),
+        getGroupLogo(groupIdNumber),
+        getGroupInfo(groupIdNumber).catch(() => null) as any,
       ]);
       if (group) groupName = group.name;
       if (logo) groupLogo = logo;

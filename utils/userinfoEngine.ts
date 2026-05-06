@@ -1,5 +1,4 @@
 import NodeCache from "node-cache";
-import * as noblox from 'noblox.js'
 import { getRobloxUsername, getRobloxThumbnail, getRobloxDisplayName } from "@/utils/roblox";
 
 const usernames = new NodeCache();

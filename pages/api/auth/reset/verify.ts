@@ -1,5 +1,5 @@
 import { withSessionRoute } from "@/lib/withSession";
-import * as noblox from "noblox.js";
+import { getRobloxBlurb } from "@/utils/roblox";
 import { NextApiRequest, NextApiResponse } from "next";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { userid, verificationCode } = verification;
 
-  const blurb = await noblox.getBlurb(Number(userid)).catch(() => null);
+  const blurb = await getRobloxBlurb(Number(userid)).catch(() => null);
 
   if (!blurb || !blurb.includes(verificationCode)) {
     return res.status(400).json({ success: false, error: "Verification code does not match" });

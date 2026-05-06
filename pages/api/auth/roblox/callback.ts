@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { withSessionRoute } from '@/lib/withSession';
 import prisma from '@/utils/database';
 import axios from 'axios';
-import * as noblox from 'noblox.js';
 import { getRobloxThumbnail } from '@/utils/roblox';
 import { isUserBlocked, logBlockedAccess } from '@/utils/blocklist';
 import { clearLoginAttempts } from '@/utils/accountLockout';
@@ -144,8 +143,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse) {
 		return res.redirect('/login?error=access_denied');
 		}
 
-		let thumbnail = await getRobloxThumbnail(userId);
-		if (!thumbnail) thumbnail = undefined;
+		let thumbnail: string | undefined = await getRobloxThumbnail(userId) || undefined;
 
 		const username = userInfo.preferred_username || userInfo.name;
 		const displayName = userInfo.nickname || username;

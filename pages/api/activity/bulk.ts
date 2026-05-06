@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
 import { withSessionRoute } from "@/lib/withSession";
-import * as noblox from "noblox.js";
+import { getRankInGroup, fetchUniverseInfo } from "@/utils/roblox";
 import { getUsername, getThumbnail } from "@/utils/userinfoEngine";
 import { checkSpecificUser } from "@/utils/permissionsManager";
 import { generateSessionTimeMessage } from "@/utils/sessionMessage";
@@ -80,9 +80,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
           continue;
         }
 
-        const userRank = await noblox
-          .getRankInGroup(Number(groupId), userid)
-          .catch(() => null);
+        const userRank = await getRankInGroup(Number(groupId), userid);
         await checkSpecificUser(userid);
 
         if (parsedConfig.role && (!userRank || userRank <= parsedConfig.role)) {
@@ -113,7 +111,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
           let gameName = null;
           if (placeid) {
             try {
-              const universeInfo: any = await noblox.getUniverseInfo(Number(placeid));
+              const universeInfo: any = await fetchUniverseInfo(Number(placeid));
               if (universeInfo?.[0]?.name) {
                 gameName = universeInfo[0].name;
               }

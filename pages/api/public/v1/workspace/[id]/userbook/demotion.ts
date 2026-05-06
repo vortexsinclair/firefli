@@ -4,7 +4,7 @@ import { validateApiKey } from "@/utils/api-auth";
 import { withPublicApiRateLimit } from "@/utils/prtl";
 import { logAudit } from "@/utils/logs";
 import { getRankingProvider } from "@/utils/rankgun";
-import * as noblox from "noblox.js";
+import { getGroupRoles, getRankInGroup, getGroupRole } from "@/utils/roblox";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -73,7 +73,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (storedTargetRank > 255 || storedAdminRank > 255) {
         try {
-          const robloxRoles = await noblox.getRoles(workspaceId);
+          const robloxRoles = await getGroupRoles(workspaceId);
           const roleIdToRank = new Map<number, number>();
           robloxRoles.forEach((role) => { roleIdToRank.set(role.id, role.rank); });
           if (storedTargetRank > 255) targetRankNum = roleIdToRank.get(storedTargetRank) ?? storedTargetRank;
@@ -132,18 +132,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               }
             } catch {
               try {
-                const currentRankInfo = await noblox.getRole(
-                  workspaceId,
-                  rankBefore,
+                const currentRankInfo = await getGroupRole(workspaceId, rankBefore,
                 );
                 rankNameBefore = currentRankInfo?.name || null;
               } catch {}
             }
           } else {
             try {
-              const currentRankInfo = await noblox.getRole(
-                workspaceId,
-                rankBefore,
+              const currentRankInfo = await getGroupRole(workspaceId, rankBefore,
               );
               rankNameBefore = currentRankInfo?.name || null;
             } catch {}
@@ -173,7 +169,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // Fetch new rank after demotion
         try {
-          let newRank: number = 0;
+          let newRank: number | null = 0;
           let newRankName: string | null = null;
           let newRolesetId: number | null = null;
 
@@ -196,14 +192,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 newRolesetId = roleInfo?.id || null;
               }
             } else {
-              newRank = await noblox.getRankInGroup(workspaceId, numericUserId);
-              const newRankInfo = await noblox.getRole(workspaceId, newRank);
+              newRank = await getRankInGroup(workspaceId, numericUserId);
+              const newRankInfo = await getGroupRole(workspaceId, newRank);
               newRankName = newRankInfo?.name || null;
               newRolesetId = newRankInfo?.id || null;
             }
           } else {
-            newRank = await noblox.getRankInGroup(workspaceId, numericUserId);
-            const newRankInfo = await noblox.getRole(workspaceId, newRank);
+            newRank = await getRankInGroup(workspaceId, numericUserId);
+            const newRankInfo = await getGroupRole(workspaceId, newRank);
             newRankName = newRankInfo?.name || null;
             newRolesetId = newRankInfo?.id || null;
           }
@@ -214,11 +210,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           let rolesetIdForSync = newRolesetId;
           if (!rolesetIdForSync) {
             try {
-              const fallbackInfo = await noblox.getRole(workspaceId, newRank);
+              const fallbackInfo = await getGroupRole(workspaceId, newRank);
               rolesetIdForSync = fallbackInfo?.id || null;
             } catch {}
           }
-          const rankIdToStore = rolesetIdForSync || newRank;
+          const rankIdToStore = rolesetIdForSync ?? newRank ?? 0;
           await prisma.rank.upsert({
             where: {
               userId_workspaceGroupId: {

@@ -4,7 +4,7 @@ import { fetchworkspace, getConfig, setConfig } from '@/utils/configEngine'
 import prisma from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
+import { getRobloxUserId } from '@/utils/roblox'
 type Data = {
 	success: boolean
 	error?: string
@@ -21,7 +21,7 @@ export async function handler(
 	if (req.session.userid) return res.status(400).json({ success: false, error: 'Already logged in' })
 	const { username } = req.body;
 	if (!username) return res.status(400).json({ success: false, error: 'Missing username' })
-	const userid = await noblox.getIdFromUsername(username).catch(() => null) as number | undefined;
+	const userid = await getRobloxUserId(username).catch(() => null) as number | undefined;
 	if (!userid) return res.status(404).json({ success: false, error: 'Username not found' })
 	
 	// Check if user is already registered

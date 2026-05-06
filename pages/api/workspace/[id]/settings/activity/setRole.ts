@@ -4,7 +4,7 @@ import { getConfig, setConfig } from '@/utils/configEngine'
 import { logAudit } from '@/utils/logs'
 import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
-import * as noblox from 'noblox.js'
+import { getGroupRole } from '@/utils/roblox';
 type Data = {
 	success: boolean
 	error?: string
@@ -27,7 +27,8 @@ export async function handler(
 	if (!workspace) return res.status(404).json({ success: false, error: 'Workspace not found' });
 
 	const activityconfig = await getConfig('activity', parseInt(req.query.id as string));
-	const role = await noblox.getRole(parseInt(req.query.id as string), req.body.role);
+    const role = await getGroupRole(parseInt(req.query.id as string), req.body.role);
+	if (!role) return res.status(404).json({ success: false, error: 'Role not found' });
 	const newconfig = {
 		...activityconfig,
 		role: role.rank

@@ -3,7 +3,7 @@ import prisma from "@/utils/database";
 import { validateApiKey } from "@/utils/api-auth";
 import { withPublicApiRateLimit } from "@/utils/prtl";
 import { logAudit } from "@/utils/logs";
-import * as noblox from "noblox.js";
+import { getGroupRoles, getRankInGroup, getGroupRole } from "@/utils/roblox";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -72,7 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (storedTargetRank > 255 || storedAdminRank > 255) {
         try {
-          const robloxRoles = await noblox.getRoles(workspaceId);
+          const robloxRoles = await getGroupRoles(workspaceId);
           const roleIdToRank = new Map<number, number>();
           robloxRoles.forEach((role) => { roleIdToRank.set(role.id, role.rank); });
           if (storedTargetRank > 255) targetRankNum = roleIdToRank.get(storedTargetRank) ?? storedTargetRank;

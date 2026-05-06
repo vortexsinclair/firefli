@@ -11,7 +11,6 @@ import {
   getThumbnail,
   getDisplayName,
 } from "@/utils/userinfoEngine";
-import * as noblox from "noblox.js";
 type Data = {
   success: boolean;
   error?: string;

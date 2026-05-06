@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { withSessionRoute } from "@/lib/withSession";
 import { withPermissionCheck } from "@/utils/permissionsManager";
 import { fetchworkspace } from "@/utils/configEngine";
-import * as noblox from "noblox.js";
+import { getGroupRoles } from "@/utils/roblox";
 
 type Data = {
   success: boolean;
@@ -31,7 +31,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         .json({ success: false, error: "Workspace not found" });
     }
 
-    const roles = await noblox.getRoles(Number(workspace.groupId));
+    const roles = await getGroupRoles(Number(workspace.groupId));
     const sortedRoles = roles.sort((a, b) => a.rank - b.rank);
     const ranks = sortedRoles
       .filter((role) => role.rank !== 0)

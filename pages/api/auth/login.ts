@@ -14,7 +14,7 @@ import {
   getRobloxUserId,
 } from "@/utils/roblox";
 import bcryptjs from "bcryptjs";
-import * as noblox from "noblox.js";
+import { getGroupLogo, getGroupInfo } from "@/utils/roblox";
 import prisma from "@/utils/database";
 import axios from "axios";
 import rateLimit from "express-rate-limit";
@@ -36,8 +36,8 @@ async function getCachedGroupInfo(groupId: number) {
     await new Promise(resolve => setTimeout(resolve, 200));
     
     const [logo, group] = await Promise.all([
-      noblox.getLogo(groupId).catch(() => '/default-group-logo.svg'),
-      noblox.getGroup(groupId).catch(() => ({ name: `Group ${groupId}` })),
+      getGroupLogo(groupId).catch(() => '/default-group-logo.svg'),
+      getGroupInfo(groupId).catch(() => ({ name: `Group ${groupId}` } as any)),
     ]);
     groupCache.set(groupId, {
       logo: logo,

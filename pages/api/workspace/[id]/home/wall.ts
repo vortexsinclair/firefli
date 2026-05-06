@@ -6,7 +6,7 @@ import { withSessionRoute } from '@/lib/withSession'
 import { withPermissionCheck } from '@/utils/permissionsManager'
 
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
+import { getGroupRoles } from '@/utils/roblox';
 
 type WallPostWithAuthor = Omit<wallPost, 'authorId' | 'workspaceGroupId'> & {
 	authorId: string;
@@ -98,7 +98,7 @@ export async function handler(
 	const rolesByRank: any[] = [];
 	
 	if (workspace) {
-		const roles = await noblox.getRoles(Number(workspace.groupId));
+		const roles = await getGroupRoles(Number(workspace.groupId));
 		roles.sort((a, b) => a.rank - b.rank);
 		rolesByRank.push(...roles);
 		roles.forEach(role => {

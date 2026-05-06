@@ -7,6 +7,7 @@ import Button from "@/components/button";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
 import { withPermissionCheckSsr } from "@/utils/permissionsManager";
 import prisma from "@/utils/database";
+import { getGroupRoles } from "@/utils/roblox";
 import type { wallPost } from "@prisma/client";
 
 type WallPostWithAuthor = wallPost & {
@@ -130,8 +131,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
     const rolesByRank: any[] = [];
 
     if (workspace) {
-      const noblox = require("noblox.js");
-      const roles = await noblox.getRoles(workspace.groupId);
+      const roles = await getGroupRoles(Number(workspace.groupId));
       roles.sort((a: any, b: any) => a.rank - b.rank);
       rolesByRank.push(...roles);
       roles.forEach((role: any) => {

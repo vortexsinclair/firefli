@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import Btn from "@/components/button";
 import { workspacestate } from "@/state";
-import { Role } from "noblox.js";
+import { type RobloxRole as Role } from "@/utils/roblox";
 import { role } from "@/utils/database";
 import { useRecoilState } from "recoil";
 import { useRouter } from "next/router";

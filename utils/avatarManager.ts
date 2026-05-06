@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import noblox from "noblox.js";
+import { getPlayerThumbnails } from "@/utils/roblox";
 
 const AVATAR_DIR = path.join(process.cwd(), "public", "avatars");
 const AVATAR_EXPIRY_MS = 3 * 24 * 60 * 60 * 1000;
@@ -28,7 +28,7 @@ export async function getCachedAvatar(userId: number): Promise<string> {
 }
 
 export async function getRemoteAvatarUrl(userId: number): Promise<string> {
-  const thumbnails = await noblox.getPlayerThumbnail([userId], 180, "png", false, "headshot");
+  const thumbnails = await getPlayerThumbnails([userId], "180x180");
   if (thumbnails && thumbnails[0] && thumbnails[0].imageUrl) {
     return thumbnails[0].imageUrl;
   }

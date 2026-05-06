@@ -7,7 +7,6 @@ import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import { getThumbnail } from "@/utils/userinfoEngine";
 import { useRecoilState } from "recoil";
 import { workspacestate } from "@/state";
-import noblox from "noblox.js";
 import Input from "@/components/input";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "@/utils/database";

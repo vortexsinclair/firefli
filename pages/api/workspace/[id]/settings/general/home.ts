@@ -6,7 +6,6 @@ import prisma, {role} from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
 import { get } from 'react-hook-form';
 type Data = {
 	success: boolean

@@ -38,7 +38,7 @@ import {
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import noblox from "noblox.js";
+import { getGroupRoles } from "@/utils/roblox";
 import { areaBasedToIANATimezone } from "@/utils/timezoneUtils";
 
 export const getServerSideProps = withPermissionCheckSsr(
@@ -681,7 +681,7 @@ export const getServerSideProps = withPermissionCheckSsr(
     try {
       if (memberRoles.length > 0) {
         const workspaceGroupId = parseInt(query.id as string);
-        const roles = await noblox.getRoles(workspaceGroupId);
+        const roles = await getGroupRoles(workspaceGroupId);
         const userRankRecord =
           user?.ranks?.find(
             (r: any) => Number(r.workspaceGroupId) === workspaceGroupId,

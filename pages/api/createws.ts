@@ -12,7 +12,7 @@ import {
 import { getRegistry } from "@/utils/registryManager";
 import { getCurrentBatch } from "@/utils/batchScheduler";
 import { sendWebhookEmbed } from "@/utils/discord";
-import * as noblox from "noblox.js";
+import { getRankInGroup, getGroupLogo, getGroupInfo } from "@/utils/roblox";
 
 type User = {
   userId: number;
@@ -75,9 +75,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       return res.status(403).json({ success: false, error: `You have reached the maximum of ${limit} workspaces` });
     }
   }
-  const urrole = await noblox
-    .getRankInGroup(groupId, req.session.userid)
-    .catch(() => null);
+  const urrole = await getRankInGroup(groupId, req.session.userid);
   if (!urrole)
     return res
       .status(400)
@@ -92,8 +90,8 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
   try {
     const [logo, group] = await Promise.all([
-      noblox.getLogo(groupId).catch(() => ""),
-      noblox.getGroup(groupId).catch(() => null),
+      getGroupLogo(groupId),
+      getGroupInfo(groupId).catch(() => null) as any,
     ]);
     if (group) groupName = group.name;
     if (logo) groupLogo = logo;

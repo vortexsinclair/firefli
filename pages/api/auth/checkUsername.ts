@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/utils/database";
-import * as noblox from "noblox.js";
+import { getRobloxUserId } from "@/utils/roblox";
 
 type Data = {
   success: boolean;
@@ -22,8 +22,7 @@ export default async function handler(
     return res.status(400).json({ success: false, error: "Missing username" });
 
   try {
-    const userid = (await noblox
-      .getIdFromUsername(username)
+    const userid = (await getRobloxUserId(username)
       .catch(() => null)) as number | undefined;
     if (!userid) {
       return res

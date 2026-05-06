@@ -2,8 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { withSessionRoute } from "@/lib/withSession";
 import prisma from "@/utils/database";
 import bcryptjs from "bcryptjs";
-import * as noblox from "noblox.js";
-import { getRobloxThumbnail } from "@/utils/roblox";
+import { getRobloxThumbnail, getRobloxUsername, getRobloxBlurb } from "@/utils/roblox";
 
 type Data = {
   success: boolean;
@@ -77,7 +76,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       );
       
       blurb = await Promise.race([
-        noblox.getBlurb(userid),
+        getRobloxBlurb(userid).then(b => b ?? ''),
         timeoutPromise
       ]);
     } catch (error) {
@@ -148,10 +147,9 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     req.session.userid = userid;
     await req.session.save();
 
-    let thumbnail = await getRobloxThumbnail(userid);
-    if (!thumbnail) thumbnail = undefined;
+    let thumbnail: string | undefined = await getRobloxThumbnail(userid) || undefined;
 
-    const username = await noblox.getUsernameFromId(userid);
+    const username = await getRobloxUsername(userid);
 
     try {
       const hashedPassword = await safeHashPassword(password);
@@ -241,7 +239,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   } catch (error) {
     console.error("Verification error:", error);
     
-    // Check if it's a noblox.js related error
+    // Check if it's a Roblox API related error
     if (error instanceof Error && error.message.includes("getBlurb")) {
       return res.status(400).json({
         success: false,

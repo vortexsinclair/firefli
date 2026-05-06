@@ -4,7 +4,7 @@ import { getConfig, setConfig } from '@/utils/configEngine'
 import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { withSessionRoute } from '@/lib/withSession'
-import * as noblox from 'noblox.js'
+import { getGroupRoles } from '@/utils/roblox';
 type Data = {
 	success: boolean
 	error?: string
@@ -32,7 +32,7 @@ export async function handler(
 	});
 	if (!workspace) return res.status(404).json({ success: false, error: 'Workspace not found' });
 
-	const roles = await noblox.getRoles(Number(workspace.groupId));
+  const roles = await getGroupRoles(Number(workspace.groupId));
 	const activityconfig = await getConfig('activity', parseInt(req.query.id as string));
 	const leaderboardRole = activityconfig?.leaderboardRole ?? (activityconfig as any)?.lRole;
 

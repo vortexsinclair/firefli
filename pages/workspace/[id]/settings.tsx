@@ -13,7 +13,7 @@ import * as SessionComponents from "@/components/settings/sessions"
 import * as Instance from "@/components/settings/instance"
 import * as Services from "@/components/settings/services"
 import toast, { Toaster } from "react-hot-toast"
-import * as noblox from "noblox.js"
+import { getGroupRoles } from "@/utils/roblox"
 import { withPermissionCheckSsr } from "@/utils/permissionsManager"
 import prisma from "@/utils/database"
 import { getUsername, getDisplayName } from "@/utils/userinfoEngine"
@@ -45,7 +45,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(asy
   const isAdmin = membership?.isAdmin || false;
   const userPermissions = currentUser?.roles?.[0]?.permissions || [];
 
-  const grouproles = await noblox.getRoles(Number(params.id))
+  const grouproles = await getGroupRoles(Number(params.id))
   
   // Only fetch roles and departments for settings, users are loaded on-demand via API
   const roles = await prisma.role.findMany({

@@ -10,7 +10,7 @@ import {
   getThumbnail,
   getDisplayName,
 } from "@/utils/userinfoEngine";
-import * as noblox from "noblox.js";
+import { getGroupRoles } from "@/utils/roblox";
 import sanitizeHtml from "sanitize-html";
 import { fileTypeFromBuffer } from "file-type";
 import isSvg from "is-svg";
@@ -239,7 +239,7 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     const rolesByRank: any[] = [];
     
     if (workspace) {
-      const roles = await noblox.getRoles(Number(workspace.groupId));
+      const roles = await getGroupRoles(Number(workspace.groupId));
       roles.sort((a, b) => a.rank - b.rank);
       rolesByRank.push(...roles);
       roles.forEach(role => {

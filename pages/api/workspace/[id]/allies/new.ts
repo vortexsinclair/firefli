@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import moment from 'moment';
-import * as noblox from 'noblox.js'
+import { getGroupInfo, getGroupLogo } from '@/utils/roblox';
 type Data = {
 	success: boolean
 	error?: string
@@ -24,9 +24,9 @@ export async function handler(
 		const groupId = req.body.groupId
 		const reps = req.body.reps
 
-		const groupInfo = await noblox.getGroup(groupId)
+		const groupInfo = await getGroupInfo(groupId).catch(() => null) as any;
 		if(!groupInfo) return res.status(400).json({ success: false, error: 'Invalid group ID' })
-		const groupIcon = await noblox.getLogo(groupId)
+const groupIcon = await getGroupLogo(groupId);
 
 		if(reps.length < 1) return res.status(400).json({ success: false, error: 'At least 1 rep required' })
 

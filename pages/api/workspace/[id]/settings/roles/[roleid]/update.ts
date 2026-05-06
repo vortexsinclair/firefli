@@ -5,7 +5,7 @@ import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { logAudit } from '@/utils/logs';
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
+import { getGroupRoles } from '@/utils/roblox';
 type Data = {
 	success: boolean
 	error?: string
@@ -32,7 +32,7 @@ export async function handler(
 			return res.status(404).json({ success: false, error: 'Workspace not found' });
 		}
 		
-		const robloxRoles = await noblox.getRoles(Number(workspace.groupId));
+		const robloxRoles = await getGroupRoles(Number(workspace.groupId));
 		const guestRole = robloxRoles.find(r => r.rank === 0);
 		
 		if (guestRole && groupRoles.includes(guestRole.id)) {

@@ -14,7 +14,7 @@ import {
   getThumbnail,
   getDisplayName,
 } from "@/utils/userinfoEngine";
-import * as noblox from "noblox.js";
+import { getGroupRoles, getRankInGroup, getGroupRole } from "@/utils/roblox";
 type Data = {
   success: boolean;
   error?: string;
@@ -127,7 +127,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
     if (storedTargetRank > 255 || storedAdminRank > 255) {
       try {
-        const robloxRoles = await noblox.getRoles(workspaceGroupId);
+        const robloxRoles = await getGroupRoles(workspaceGroupId);
         const roleIdToRank = new Map<number, number>();
         robloxRoles.forEach((role) => {
           roleIdToRank.set(role.id, role.rank);
@@ -205,7 +205,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
             }
           } catch {
             try {
-              const robloxRoles = await noblox.getRoles(workspaceGroupId);
+              const robloxRoles = await getGroupRoles(workspaceGroupId);
               if (storedRankId > 255) {
                 const roleInfo = robloxRoles.find(r => r.id === storedRankId);
                 rankBefore = roleInfo?.rank ?? storedRankId;
@@ -221,7 +221,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
           }
         } else {
           try {
-            const robloxRoles = await noblox.getRoles(workspaceGroupId);
+            const robloxRoles = await getGroupRoles(workspaceGroupId);
             if (storedRankId > 255) {
               const roleInfo = robloxRoles.find(r => r.id === storedRankId);
               rankBefore = roleInfo?.rank ?? storedRankId;
@@ -249,7 +249,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         let adminRankNumber = storedAdminRankId;
         if (storedAdminRankId > 255) {
           try {
-            const robloxRoles = await noblox.getRoles(workspaceGroupId);
+            const robloxRoles = await getGroupRoles(workspaceGroupId);
             const adminRoleInfo = robloxRoles.find(r => r.id === storedAdminRankId);
             adminRankNumber = adminRoleInfo?.rank ?? storedAdminRankId;
           } catch {
@@ -328,7 +328,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
             if (adminUserRank) {
               const storedAdminRankId = Number(adminUserRank.rankId);
-              const roles = await noblox.getRoles(workspaceGroupId);
+              const roles = await getGroupRoles(workspaceGroupId);
               const targetRoleData = roles.find(r => r.id === parseInt(targetRole));
               if (!targetRoleData) {
                 return res.status(400).json({
@@ -441,7 +441,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       }
 
       try {
-        let newRank: number;
+        let newRank: number | null = null;
         let newRankName: string | null = null;
         let newRolesetId: number | null = null;
 
@@ -462,14 +462,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
               newRank = 0;
             }
           } else {
-            newRank = await noblox.getRankInGroup(workspaceGroupId, userId);
-            const newRankInfo = await noblox.getRole(workspaceGroupId, newRank);
+            newRank = await getRankInGroup(workspaceGroupId, userId);
+            const newRankInfo = await getGroupRole(workspaceGroupId, newRank);
             newRankName = newRankInfo?.name || null;
             newRolesetId = newRankInfo?.id || null;
           }
         } else {
-          newRank = await noblox.getRankInGroup(workspaceGroupId, userId);
-          const newRankInfo = await noblox.getRole(workspaceGroupId, newRank);
+          newRank = await getRankInGroup(workspaceGroupId, userId);
+          const newRankInfo = await getGroupRole(workspaceGroupId, newRank);
           newRankName = newRankInfo?.name || null;
           newRolesetId = newRankInfo?.id || null;
         }
@@ -479,11 +479,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         let rolesetIdForSync = newRolesetId;
         if (!rolesetIdForSync) {
           try {
-            const fallbackInfo = await noblox.getRole(workspaceGroupId, newRank);
+            const fallbackInfo = await getGroupRole(workspaceGroupId, newRank);
             rolesetIdForSync = fallbackInfo?.id || null;
           } catch {}
         }
-        const rankIdToStore = rolesetIdForSync || newRank;
+        const rankIdToStore = rolesetIdForSync ?? newRank ?? 0;
         await prisma.rank.upsert({
           where: {
             userId_workspaceGroupId: {

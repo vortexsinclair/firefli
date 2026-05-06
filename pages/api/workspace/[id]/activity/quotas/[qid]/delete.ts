@@ -5,7 +5,6 @@ import prisma, { inactivityNotice } from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
 import { logAudit } from '@/utils/logs';
 type Data = {
 	success: boolean

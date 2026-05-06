@@ -24,7 +24,7 @@ import {
   IconDeviceFloppy,
 } from "@tabler/icons-react";
 import { withPermissionCheckSsr } from "@/utils/permissionsManager";
-import * as noblox from "noblox.js";
+import { fetchGroupGames } from "@/utils/roblox";
 import { useRouter } from "next/router";
 import axios from "axios";
 import prisma from "@/utils/database";
@@ -39,7 +39,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
     let fallbackToManual = false;
 
     try {
-      const fetchedGames = await noblox.getGroupGames(Number(id));
+      const fetchedGames = await fetchGroupGames(Number(id));
       games = fetchedGames
         .filter((game: any) => game.rootPlace?.type === "Place")
         .map((game: any) => ({
@@ -48,7 +48,7 @@ export const getServerSideProps: GetServerSideProps = withPermissionCheckSsr(
         }))
         .filter((game) => !isNaN(game.id) && game.id > 0);
     } catch (err) {
-      console.error("Failed to fetch games from noblox:", err);
+      console.error("Failed to fetch games from Roblox:", err);
       fallbackToManual = true;
     }
     const session = await prisma.sessionType.findUnique({

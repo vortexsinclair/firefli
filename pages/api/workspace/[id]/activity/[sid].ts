@@ -4,7 +4,7 @@ import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { withSessionRoute } from '@/lib/withSession'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import { getUniverseInfo } from 'noblox.js';
+import { fetchUniverseInfo } from '@/utils/roblox';
 import axios from 'axios';
 type Data = {
 	success: boolean;
@@ -81,7 +81,7 @@ export async function handler(
 	}
 
 	try {
-		const universeInfo: any[] = await getUniverseInfo(Number(session.universeId)) as any;
+const universeInfo: any[] = await fetchUniverseInfo(Number(session.universeId));
 
 		const { data, status } = await axios.get(`https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${session.universeId}&size=768x432&format=Png&isCircular=false`);
 		const universeName = universeInfo?.[0]?.name || "Unknown Game";

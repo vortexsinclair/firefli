@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { withSessionRoute } from "@/lib/withSession";
 import prisma from "@/utils/database";
 import bcryptjs from "bcryptjs";
-import * as noblox from "noblox.js";
+import { getRobloxUserId } from "@/utils/roblox";
 
 export default withSessionRoute(async (req: NextApiRequest, res: NextApiResponse) => {
 	if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
@@ -13,7 +13,7 @@ export default withSessionRoute(async (req: NextApiRequest, res: NextApiResponse
 	const existingUser = await prisma.user.findFirst({ where: { username } });
 	if (!existingUser) return res.status(400).json({ success: false, error: "User is not registered" });
 
-	const authid = await noblox.getIdFromUsername(username).catch(() => null) as number | undefined;
+	const authid = await getRobloxUserId(username).catch(() => null) as number | undefined;
 	if (!authid) return res.status(404).json({ success: false, error: "Roblox user not found" });
 
 	const array = ["📋", "🎉", "🎂", "📆", "✔️", "📃", "👍", "➕", "📢", "🐒", "🐴", "🐑", "🐘", "🐼", "🐧", "🐦", "🐤", "🐥", "🐣", "🐔", "🐍", "🐢", "🐛", "🐝", "🐜"];

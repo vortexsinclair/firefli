@@ -6,17 +6,12 @@ import type {
   GetServerSidePropsContext,
 } from "next";
 import { withSessionRoute, withSessionSsr } from "@/lib/withSession";
-import * as noblox from "noblox.js";
+import { getGroupLogo, getGroupInfo, getGroupRoles, type RobloxRole } from "@/utils/roblox";
 import { getConfig } from "./configEngine";
 import { validateCsrf } from "./csrf";
 import { getThumbnail, getUsername } from "./userinfoEngine";
 import { getWorkspaceRobloxApiKey, fetchOpenCloudRoleMembers, fetchCloudV2UserInfoBatch } from "./openCloud";
 
-let nobloxInitialized = false;
-async function ensureNobloxAuth() {
-  if (nobloxInitialized) return;
-}
-ensureNobloxAuth();
 
 const permissionsCache = new Map<string, { data: any; timestamp: number }>();
 const PERMISSIONS_CACHE_DURATION = 30000;
@@ -45,7 +40,7 @@ type MiddlewareData = {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function retryNobloxRequest<T>(
+async function retryRobloxRequest<T>(
   fn: () => Promise<T>,
   maxRetries = 5,
   initialDelay = 1000
@@ -57,7 +52,7 @@ async function retryNobloxRequest<T>(
       if (attempt > 0) {
         const delayMs = initialDelay * Math.pow(2, attempt - 1);
         console.log(
-          `[retryNobloxRequest] Retrying after ${delayMs}ms (attempt ${
+          `[retryRobloxRequest] Retrying after ${delayMs}ms (attempt ${
             attempt + 1
           }/${maxRetries})`
         );
@@ -76,7 +71,7 @@ async function retryNobloxRequest<T>(
 
       if (isRateLimitError && attempt < maxRetries - 1) {
         console.log(
-          `[retryNobloxRequest] Rate limit hit, will retry (attempt ${
+          `[retryRobloxRequest] Rate limit hit, will retry (attempt ${
             attempt + 1
           }/${maxRetries})`
         );
@@ -375,8 +370,8 @@ export async function checkGroupRoles(groupID: bigint | number) {
     
     try {
       const [logo, group] = await Promise.all([
-        noblox.getLogo(Number(groupID)).catch(() => null),
-        noblox.getGroup(Number(groupID)).catch(() => null),
+        getGroupLogo(Number(groupID)).catch(() => null),
+        getGroupInfo(Number(groupID)).catch(() => null),
       ]);
 
       if (logo || group) {
@@ -571,7 +566,7 @@ export async function checkGroupRoles(groupID: bigint | number) {
       return;
     }
 
-    const ranks: noblox.Role[] = [];
+    const ranks: RobloxRole[] = [];
 
     const rs = await prisma.role
       .findMany({

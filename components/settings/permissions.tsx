@@ -10,7 +10,7 @@ import { role } from "@/utils/database";
 import Roles from "@/components/settings/permissions/roles";
 import Departments from "@/components/settings/permissions/departments";
 import Users from "@/components/settings/permissions/users";
-import { Role } from "noblox.js";
+import { type RobloxRole as Role } from "@/utils/roblox";
 import { Department } from "@/components/settings/permissions/departments";
 
 import { useRecoilState } from "recoil";

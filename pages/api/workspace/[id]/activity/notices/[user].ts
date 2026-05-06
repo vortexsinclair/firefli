@@ -5,7 +5,6 @@ import prisma from '@/utils/database';
 import { withSessionRoute } from '@/lib/withSession'
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
 import { inactivityNotice } from '@prisma/client';
 
 type SerializedInactivityNotice = Omit<inactivityNotice, 'userId'> & {

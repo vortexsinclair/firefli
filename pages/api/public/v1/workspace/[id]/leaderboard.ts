@@ -3,7 +3,7 @@ import prisma from "@/utils/database"
 import { validateApiKey } from "@/utils/api-auth"
 import { getConfig } from "@/utils/configEngine"
 import { withPublicApiRateLimit } from "@/utils/prtl"
-import noblox from "noblox.js"
+import { getGroupRoles } from "@/utils/roblox"
 
 type LeaderboardEntry = {
   _id: string
@@ -30,7 +30,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const activityConfig = await getConfig("activity", workspaceId)
     const leaderboardRankNum = activityConfig?.leaderboardRole ?? (activityConfig as any)?.lRole
     const idleTimeEnabled = activityConfig?.idleTimeEnabled ?? true
-    const robloxRoles = await noblox.getRoles(workspaceId).catch(() => [])
+    const robloxRoles = await getGroupRoles(workspaceId)
     const roleIdToRankNum = new Map<number, number>()
     for (const role of robloxRoles) {
       roleIdToRankNum.set(role.id, role.rank)

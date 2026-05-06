@@ -5,7 +5,6 @@ import prisma from '@/utils/database';
 import { withPermissionCheck } from '@/utils/permissionsManager'
 import { logAudit } from '@/utils/logs';
 import { getUsername, getThumbnail, getDisplayName } from '@/utils/userinfoEngine'
-import * as noblox from 'noblox.js'
 import roles from '..';
 type Data = {
 	success: boolean

@@ -3,7 +3,7 @@ import prisma from "@/utils/database";
 import { withPermissionCheck } from "@/utils/permissionsManager";
 import { getConfig } from "@/utils/configEngine";
 import { getThumbnail } from "@/utils/userinfoEngine";
-import noblox from "noblox.js";
+import { getGroupRoles } from "@/utils/roblox";
 
 export default withPermissionCheck(
   async (req: NextApiRequest, res: NextApiResponse) => {
@@ -220,7 +220,7 @@ export default withPermissionCheck(
         });
       }
 
-      const robloxRoles = await noblox.getRoles(workspaceGroupId).catch(() => []);
+      const robloxRoles = await getGroupRoles(workspaceGroupId);
       // Sort roles by rank hierarchy (0 → 255) for consistent display
       robloxRoles.sort((a, b) => a.rank - b.rank);
       const roleIdToInfoMap = new Map<number, { rank: number; name: string }>();
@@ -596,7 +596,7 @@ export default withPermissionCheck(
 
       let ranks: any[] = [];
       try {
-        ranks = await noblox.getRoles(workspaceGroupId);
+        ranks = await getGroupRoles(workspaceGroupId);
         ranks = ranks.sort((a, b) => a.rank - b.rank);
       } catch (error) {
         console.error('Error fetching ranks from Roblox:', error);

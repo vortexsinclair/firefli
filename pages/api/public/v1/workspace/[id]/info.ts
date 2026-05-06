@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import prisma from "@/utils/database"
-import * as noblox from "noblox.js"
+import { getGroupInfo, getGroupLogo } from "@/utils/roblox"
 import { withPublicApiRateLimit } from "@/utils/prtl"
 import { validateApiKey } from "@/utils/api-auth"
 import { getConfig } from "@/utils/configEngine"
@@ -89,8 +89,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const [groupInfo, logo, colour] = await Promise.all([
-      noblox.getGroup(Number(workspace.groupId)),
-      noblox.getLogo(Number(workspace.groupId)),
+      getGroupInfo(Number(workspace.groupId)).catch(() => null) as any,
+      getGroupLogo(Number(workspace.groupId)),
       getConfig("theme", workspace.groupId),
     ])
 
