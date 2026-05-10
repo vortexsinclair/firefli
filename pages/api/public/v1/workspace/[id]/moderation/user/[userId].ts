@@ -32,7 +32,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       where.revokedAt = null
       where.status = "resolved"
       where.action = {
-        in: ["perm_ban", "temp_ban"],
+        in: ["ban", "perm_ban", "temp_ban"],
       }
       where.OR = [
        { isPermanent: true },

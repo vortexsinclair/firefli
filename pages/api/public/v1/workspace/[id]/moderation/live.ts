@@ -33,7 +33,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         revokedAt: null,
         createdAt: { gt: sinceDate },
         action: {
-          in: ["kick", "temp_ban", "perm_ban"],
+          in: ["kick", "ban", "temp_ban", "perm_ban"],
         },
       },
       select: {
