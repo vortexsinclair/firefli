@@ -150,7 +150,7 @@ export const getServerSideProps = withPermissionCheckSsr(
       };
     }
   },
-  ["view_moderation_logs"]
+  ["view_moderation"]
 );
 
 const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({ cases: initialCases, stats }) => {

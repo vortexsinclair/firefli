@@ -64,7 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const isAdmin = workspaceMember.isAdmin || false;
     const userRoles = workspaceMember.user.roles || [];
     const hasPermission = userRoles.some((role: any) =>
-      role.permissions?.includes("view_moderation_logs")
+      role.permissions?.includes("view_moderation")
     );
 
     if (!isAdmin && !hasPermission) {

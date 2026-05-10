@@ -238,7 +238,7 @@ export const getServerSideProps = withPermissionCheckSsr(
       return { notFound: true };
     }
   },
-  ["view_moderation_logs"]
+  ["view_moderation"]
 );
 
 const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({ case: caseData, logs }) => {

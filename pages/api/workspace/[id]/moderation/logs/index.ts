@@ -85,4 +85,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
-export default withPermissionCheck(handler, ["view_moderation_logs"]);
+export default withPermissionCheck(handler, ["view_moderation"]);

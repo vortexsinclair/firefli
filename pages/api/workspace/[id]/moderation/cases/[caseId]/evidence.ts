@@ -152,4 +152,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
-export default withPermissionCheck(handler, ["upload_evidence", "view_moderation_logs"]);
+export default withPermissionCheck(handler, ["upload_evidence", "view_moderation"]);
