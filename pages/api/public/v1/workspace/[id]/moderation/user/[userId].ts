@@ -1,43 +1,51 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import prisma from "@/utils/database"
-import { withPublicApiRateLimit } from "@/utils/prtl"
-import { validateApiKey } from "@/utils/api-auth"
+import type { NextApiRequest, NextApiResponse } from "next";
+import prisma from "@/utils/database";
+import { withPublicApiRateLimit } from "@/utils/prtl";
+import { validateApiKey } from "@/utils/api-auth";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "GET") return res.status(405).json({ success: false, error: "Method not allowed" })
+  if (req.method !== "GET")
+    return res
+      .status(405)
+      .json({ success: false, error: "Method not allowed" });
 
-  const apiKey = req.headers.authorization?.replace("Bearer ", "")
-  if (!apiKey) return res.status(401).json({ success: false, error: "Missing API key" })
+  const apiKey = req.headers.authorization?.replace("Bearer ", "");
+  if (!apiKey)
+    return res.status(401).json({ success: false, error: "Missing API key" });
 
-  const workspaceId = Number.parseInt(req.query.id as string)
-  if (!workspaceId) return res.status(400).json({ success: false, error: "Missing workspace ID" })
+  const workspaceId = Number.parseInt(req.query.id as string);
+  if (!workspaceId)
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing workspace ID" });
 
-  const rawUserId = req.query.userId ?? req.query.userid
-  const targetUserId = Number.parseInt(rawUserId as string)
+  const rawUserId = req.query.userId ?? req.query.userid;
+  const targetUserId = Number.parseInt(rawUserId as string);
   if (!targetUserId || targetUserId <= 0) {
-    return res.status(400).json({ success: false, error: "Invalid userId" })
+    return res.status(400).json({ success: false, error: "Invalid userId" });
   }
 
   try {
-    const key = await validateApiKey(apiKey, workspaceId)
-    if (!key) return res.status(401).json({ success: false, error: "Invalid or expired API key" })
+    const key = await validateApiKey(apiKey, workspaceId);
+    if (!key)
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid or expired API key" });
 
-    const { current, startDate, endDate } = req.query
+    const { current, startDate, endDate } = req.query;
+    const now = new Date();
     const where: any = {
       workspaceGroupId: BigInt(workspaceId),
       targetUserId: BigInt(targetUserId),
-    }
+    };
 
     if (current === "true") {
-      where.revokedAt = null
-      where.status = "resolved"
+      where.revokedAt = null;
+      where.status = "resolved";
       where.action = {
-        in: ["ban", "perm_ban", "temp_ban"],
-      }
-      where.OR = [
-        { isPermanent: true },
-        { expiresAt: { gt: new Date() } },
-      ]
+        in: ["perm_ban", "temp_ban"],
+      };
+      where.OR = [{ isPermanent: true }, { expiresAt: { gt: new Date() } }];
     }
 
     const cases = await prisma.moderationCase.findMany({
@@ -74,9 +82,43 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       },
       orderBy: { createdAt: "desc" },
       take: 200,
-    })
+    });
 
-    const formatted = cases.map((c) => ({
+    const activeBans = await prisma.playerBan.findMany({
+      where: {
+        workspaceGroupId: BigInt(workspaceId),
+        userId: BigInt(targetUserId),
+        active: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const filteredCases =
+      current === "true"
+        ? cases.filter((c) => {
+            if (c.revokedAt) return false;
+            if (c.status !== "resolved") return false;
+            if (!["temp_ban", "perm_ban"].includes(c.action || ""))
+              return false;
+
+            return activeBans.some((ban) => {
+              if (ban.userId !== c.targetUserId) return false;
+
+              if (c.action === "perm_ban") {
+                return ban.expiresAt === null;
+              }
+
+              if (c.action === "temp_ban") {
+                return !!ban.expiresAt && ban.expiresAt > now;
+              }
+
+              return false;
+            });
+          })
+        : cases;
+
+    const formatted = filteredCases.map((c) => ({
       id: c.id,
       targetUserId: Number(c.targetUserId),
       targetUsername: c.targetUsername,
@@ -106,7 +148,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               : null,
           }
         : null,
-    }))
+    }));
 
     return res.status(200).json({
       success: true,
@@ -115,11 +157,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         total: formatted.length,
         cases: formatted,
       },
-    })
+    });
   } catch (error) {
-    console.error("Error fetching case history via public API:", error)
-    return res.status(500).json({ success: false, error: "Internal server error" })
+    console.error("Error fetching case history via public API:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
   }
 }
 
-export default withPublicApiRateLimit(handler)
+export default withPublicApiRateLimit(handler);
