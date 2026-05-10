@@ -29,8 +29,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const cases = await prisma.moderationCase.findMany({
       where: {
         workspaceGroupId: BigInt(workspaceId),
-        status: "open",
+        status: "resolved",
+        revokedAt: null,
         createdAt: { gt: sinceDate },
+        action: {
+          in: ["kick", "temp_ban", "perm_ban"],
+        },
       },
       select: {
         id: true,

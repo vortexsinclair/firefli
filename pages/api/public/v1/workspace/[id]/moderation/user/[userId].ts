@@ -31,10 +31,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (current === "true") {
       where.revokedAt = null
       where.status = "resolved"
-      where.action = { not: "kick" }
+      where.action = {
+        in: ["perm_ban", "temp_ban"],
+      }
       where.OR = [
-        { isPermanent: true },
-        { expiresAt: { gt: new Date() } },
+       { isPermanent: true },
+       { expiresAt: { gt: new Date() } },
       ]
     } else if (startDate || endDate) {
       where.createdAt = {}
