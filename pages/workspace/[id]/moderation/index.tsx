@@ -185,7 +185,18 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
     workspaceData.isAdmin;
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
-      const matchesStatus = filterStatus === "all" || c.status === filterStatus;
+      const isRevoked = !!c.revokedAt;
+      
+      let matchesStatus;
+      if (filterStatus === "all") {
+        matchesStatus = true;
+      } else if (filterStatus === "revoked") {
+        matchesStatus = isRevoked;
+      } else {
+        // For other statuses, only match if not revoked and status matches
+        matchesStatus = !isRevoked && c.status === filterStatus;
+      }
+      
       const matchesSearch =
         !searchQuery ||
         c.targetUsername?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -332,8 +343,7 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
             <option value="all">All Status</option>
             <option value="open">Open</option>
             <option value="resolved">Resolved</option>
-            <option value="archived">Archived</option>
-            <option value="appealed">Appealed</option>
+            <option value="revoked">Revoked</option>
           </select>
           <button
             onClick={refreshCases}
@@ -346,7 +356,8 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
       </div>
 
       <div className="bg-white dark:bg-zinc-800 border border-white/10 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-zinc-50 dark:bg-zinc-700/50 border-b border-zinc-200 dark:border-zinc-600">
               <tr>
@@ -358,6 +369,9 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  Punishment
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Evidence
@@ -374,7 +388,7 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
               {filteredCases.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-12 text-center text-zinc-500 dark:text-zinc-400"
                   >
                     No cases found
@@ -384,7 +398,12 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
                 filteredCases.map((c) => (
                   <tr
                     key={c.id}
-                    className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                    onClick={() =>
+                      router.push(
+                        `/workspace/${workspaceId}/moderation/cases/${c.id}`,
+                      )
+                    }
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -416,12 +435,41 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          STATUS_COLORS[c.status] ||
-                          "bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white"
+                          c.revokedAt
+                            ? STATUS_COLORS["revoked"]
+                            : STATUS_COLORS[c.status] ||
+                              "bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white"
                         }`}
                       >
-                        {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                        {c.revokedAt
+                          ? "Revoked"
+                          : c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.action ? (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            c.action === "kick"
+                              ? "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                              : c.action === "warning"
+                              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
+                              : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                          }`}
+                        >
+                          {c.action === "kick"
+                            ? "Kick"
+                            : c.action === "warning"
+                            ? "Warning"
+                            : c.action === "temp_ban"
+                            ? "Temp Ban"
+                            : c.action === "perm_ban"
+                            ? "Perm Ban"
+                            : c.action.charAt(0).toUpperCase() + c.action.slice(1)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400 dark:text-zinc-500">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -431,20 +479,8 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
                     <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
                       {moment(c.createdAt).fromNow()}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
-                        <Tooltip orientation="top" tooltipText="View Details">
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/workspace/${workspaceId}/moderation/cases/${c.id}`,
-                              )
-                            }
-                            className="text-primary hover:text-primary/80 transition-colors"
-                          >
-                            <IconEye size={18} />
-                          </button>
-                        </Tooltip>
                         {c.action && !c.revokedAt && canRevokePunishments && (
                           <Tooltip
                             orientation="top"
@@ -480,6 +516,116 @@ const ModerationDashboard: pageWithLayout<ModerationDashboardProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+        <div className="md:hidden divide-y divide-zinc-200 dark:divide-zinc-700">
+          {filteredCases.length === 0 ? (
+            <div className="px-4 py-12 text-center text-zinc-500 dark:text-zinc-400">
+              No cases found
+            </div>
+          ) : (
+            filteredCases.map((c) => (
+              <div
+                key={c.id}
+                onClick={() =>
+                  router.push(
+                    `/workspace/${workspaceId}/moderation/cases/${c.id}`,
+                  )
+                }
+                className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <img
+                    src={
+                      c.targetUser?.picture ||
+                      `/api/workspace/${workspaceId}/avatar/${c.targetUserId}`
+                    }
+                    alt=""
+                    className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-zinc-700"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-zinc-900 dark:text-white">
+                      {c.targetUsername ||
+                        c.targetUser?.username ||
+                        "Unknown"}
+                    </div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      ID: {c.targetUserId}
+                    </div>
+                    <div className="mt-1 text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
+                      {c.reason}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      c.revokedAt
+                        ? STATUS_COLORS["revoked"]
+                        : STATUS_COLORS[c.status] ||
+                          "bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white"
+                    }`}
+                  >
+                    {c.revokedAt
+                      ? "Revoked"
+                      : c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                  </span>
+                  {c.action && (
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        c.action === "kick"
+                          ? "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                          : c.action === "warning"
+                          ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
+                          : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                      }`}
+                    >
+                      {c.action === "kick"
+                        ? "Kick"
+                        : c.action === "warning"
+                        ? "Warning"
+                        : c.action === "temp_ban"
+                        ? "Temp Ban"
+                        : c.action === "perm_ban"
+                        ? "Perm Ban"
+                        : c.action.charAt(0).toUpperCase() + c.action.slice(1)}
+                    </span>
+                  )}
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {c.evidence?.length || 0} files • {moment(c.createdAt).fromNow()}
+                  </span>
+                </div>
+
+                {(c.action && !c.revokedAt && canRevokePunishments) ||
+                (c.status === "open" &&
+                  isBanAction(c.action) &&
+                  canExecutePunishments) ? (
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    {c.action && !c.revokedAt && canRevokePunishments && (
+                      <button
+                        onClick={() => handleOpenRevokeModal(c)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <IconX size={16} />
+                        Revoke
+                      </button>
+                    )}
+                    {c.status === "open" &&
+                      isBanAction(c.action) &&
+                      canExecutePunishments && (
+                        <button
+                          onClick={() => handleExecuteBan(c)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+                        >
+                          <IconBan size={16} />
+                          Execute Ban
+                        </button>
+                      )}
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
