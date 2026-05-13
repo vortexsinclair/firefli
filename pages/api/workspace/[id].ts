@@ -23,6 +23,7 @@ type Data = {
 			alliesEnabled: boolean
 			policiesEnabled: boolean
 			recommendationsEnabled: boolean
+			moderationEnabled: boolean
 			widgets: string[]
 		}
 	}
@@ -68,7 +69,8 @@ export async function handler(
 		noticesConfig,
 		policiesConfig,
 		homeConfig,
-		recommendationsConfig
+		recommendationsConfig,
+		moderationConfig
 	] = await Promise.all([
 		getConfig('customization', workspace.groupId),
 		prisma.role.findMany({
@@ -102,7 +104,8 @@ export async function handler(
 		getConfig('notices', workspace.groupId),
 		getConfig('policies', workspace.groupId),
 		getConfig('home', workspace.groupId),
-		getConfig('recommendations', workspace.groupId)
+		getConfig('recommendations', workspace.groupId),
+		getConfig('moderation', workspace.groupId)
 	]);
 	
 	console.log(`All data fetched after ${new Date().getTime() - time.getTime()}ms`)
@@ -202,6 +205,7 @@ export async function handler(
 			alliesEnabled: alliesConfig?.enabled || false,
 			policiesEnabled: policiesConfig?.enabled || false,
 			recommendationsEnabled: recommendationsConfig?.enabled || false,
+			moderationEnabled: moderationConfig?.enabled || false,
 			widgets: homeConfig?.widgets || []
 		}
 	} })

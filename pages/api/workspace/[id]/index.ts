@@ -24,6 +24,7 @@ type Data = {
 			alliesEnabled: boolean
 			policiesEnabled: boolean
 			recommendationsEnabled: boolean
+			moderationEnabled: boolean
 			widgets: string[]
 			layout?: Array<{
 				i: string
@@ -178,6 +179,7 @@ export async function handler(
 			alliesEnabled: (await getConfig('allies', workspace.groupId))?.enabled || false,
 			policiesEnabled: (await getConfig('policies', workspace.groupId))?.enabled || false,
 			recommendationsEnabled: (await getConfig('recommendations', workspace.groupId))?.enabled || false,
+			moderationEnabled: (await getConfig('moderation', workspace.groupId))?.enabled || false,
 			widgets: (await getConfig('home', workspace.groupId))?.widgets || [],
 			layout: (await getConfig('home', workspace.groupId))?.layout || undefined
 		}

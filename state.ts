@@ -52,6 +52,7 @@ const workspacestate = atom({
 			leaderboardEnabled: true,
 			policiesEnabled: false,
 			recommendationsEnabled: false,
+			moderationEnabled: false,
 			widgets: [] as string[],
 			layout: undefined as Array<{
 				i: string;

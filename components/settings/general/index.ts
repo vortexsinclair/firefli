@@ -6,4 +6,5 @@ import Recommendations from './recommendations'
 import Policies from './policies'
 import AuditLogs from './logs'
 import Admin from './admin'
-export { home, Color, Alliances, Activity, AuditLogs, Policies, Recommendations, Admin };
+import Moderation from './moderation'
+export { home, Color, Alliances, Activity, AuditLogs, Policies, Recommendations, Admin, Moderation };
