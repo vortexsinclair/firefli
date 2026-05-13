@@ -177,6 +177,7 @@ const Sidebar: NextPage = () => {
   const [alliesEnabled, setAlliesEnabled] = useState(false);
   const [policiesEnabled, setPoliciesEnabled] = useState(false);
   const [recommendationsEnabled, setRecommendationsEnabled] = useState(false);
+  const [moderationEnabled, setModerationEnabled] = useState(false);
   const [pendingPolicyCount, setPendingPolicyCount] = useState(0);
   const [pendingNoticesCount, setPendingNoticesCount] = useState(0);
   const router = useRouter()
@@ -297,12 +298,12 @@ const Sidebar: NextPage = () => {
         `/workspace/${workspace.groupId}/recommendations`,
       ]
     }] : []),
-    {
+    ...(moderationEnabled ? [{
       name: "Moderation",
       href: `/workspace/${workspace.groupId}/moderation`,
       icon: UserShield01Icon,
       accessible: workspace.yourPermission?.includes("view_moderation") || workspace.isAdmin,
-    },
+    }] : []),
     ...(alliesEnabled ? [{
       name: "Alliances",
       href: `/workspace/${workspace.groupId}/alliances`,
@@ -408,6 +409,7 @@ const Sidebar: NextPage = () => {
 		setAlliesEnabled(data.value.allies?.enabled ?? false);
 		setRecommendationsEnabled(data.value.recommendations?.enabled ?? false);
 		setPoliciesEnabled(data.value.policies?.enabled ?? false);
+		setModerationEnabled(data.value.moderation?.enabled ?? false);
       })
   }, [workspace.groupId]);
 

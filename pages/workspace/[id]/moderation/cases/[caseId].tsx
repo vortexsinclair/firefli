@@ -6,6 +6,7 @@ import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { withPermissionCheckSsr } from "@/utils/permissionsManager";
 import prisma from "@/utils/database";
+import { getConfig } from "@/utils/configEngine";
 import moment from "moment";
 import Tooltip from "@/components/tooltip";
 import { useRecoilValue } from "recoil";
@@ -130,6 +131,11 @@ export const getServerSideProps = withPermissionCheckSsr(
     const userId = req.session?.userid;
     const groupId = BigInt(params?.id as string);
     const caseId = params?.caseId as string;
+
+    const moderationConfig = await getConfig('moderation', groupId);
+    if (!moderationConfig?.enabled) {
+      return { notFound: true };
+    }
 
     if (!userId) {
       return { notFound: true };
