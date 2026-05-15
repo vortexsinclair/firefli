@@ -25,7 +25,34 @@ export async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
       include: { category: true },
       orderBy: [{ weight: "asc" }, { createdAt: "asc" }],
     });
-    return res.status(200).json({ success: true, templates });
+
+    const workspaceRoles = await prisma.role.findMany({
+      where: { workspaceGroupId },
+      select: { id: true, groupRoles: true },
+    });
+
+    const expandedTemplates = templates.map((t) => {
+      const stored = Array.isArray(t.groupRoles) ? t.groupRoles : [];
+      if (stored.length === 0) {
+        return { ...t, expandedGroupRoles: [], eligibleRoleIds: [] };
+      }
+      const expanded = new Set<number>(stored);
+      const matchingRoleIds: string[] = [];
+      for (const wr of workspaceRoles) {
+        const ranks = Array.isArray(wr.groupRoles) ? wr.groupRoles : [];
+        if (ranks.some((r) => stored.includes(r))) {
+          for (const r of ranks) expanded.add(r);
+          matchingRoleIds.push(wr.id);
+        }
+      }
+      return {
+        ...t,
+        expandedGroupRoles: Array.from(expanded),
+        eligibleRoleIds: matchingRoleIds,
+      };
+    });
+
+    return res.status(200).json({ success: true, templates: expandedTemplates });
   }
 
   if (req.method === "POST") {

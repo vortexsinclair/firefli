@@ -7,11 +7,12 @@ export default withPermissionCheck(async (req: NextApiRequest, res: NextApiRespo
 	}
 	const { id } = req.query;
 	try {
+		const workspaceGroupId = parseInt(id as string);
 		const workspaceUsers = await prisma.user.findMany({
 			where: {
 				roles: {
 					some: {
-						workspaceGroupId: parseInt(id as string)
+						workspaceGroupId: workspaceGroupId
 					}
 				}
 			},
@@ -19,15 +20,31 @@ export default withPermissionCheck(async (req: NextApiRequest, res: NextApiRespo
 				userid: true,
 				username: true,
 				picture: true,
-				registered: true
+				registered: true,
+				ranks: {
+					where: { workspaceGroupId: workspaceGroupId },
+					select: { rankId: true }
+				},
+				roles: {
+					where: { workspaceGroupId: workspaceGroupId },
+					select: { id: true }
+				}
 			}
 		});
-		const users = workspaceUsers.map(user => ({
-			userid: user.userid.toString(),
-			username: user.username,
-			picture: user.picture,
-			registered: user.registered ?? false
-		}));
+		const users = workspaceUsers.map(user => {
+			const rankId = user.ranks?.[0]?.rankId != null
+				? Number(user.ranks[0].rankId)
+				: null;
+			const roleIds = (user.roles || []).map(r => r.id);
+			return {
+				userid: user.userid.toString(),
+				username: user.username,
+				picture: user.picture,
+				registered: user.registered ?? false,
+				rankId,
+				roleIds
+			};
+		});
 		res.status(200).json(users);
 	} catch (error) {
 		console.error('Error fetching workspace users:', error);

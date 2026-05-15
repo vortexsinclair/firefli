@@ -223,6 +223,17 @@ export const getServerSideProps = withPermissionCheckSsr(
               })
               .then((r) => (r ? Number(r.rankId) : null))
           : null,
+        currentUserRoleIds: req.session?.userid
+          ? await prisma.role
+              .findMany({
+                where: {
+                  workspaceGroupId: parseInt(query.id as string),
+                  members: { some: { userid: BigInt(req.session.userid) } },
+                },
+                select: { id: true },
+              })
+              .then((rs) => rs.map((r) => r.id))
+          : [],
       },
     };
   }
@@ -583,6 +594,7 @@ type pageProps = {
     sessionsAttended: number;
   } | null;
   currentUserRankId: number | null;
+  currentUserRoleIds: string[];
 };
 
 const Home: pageWithLayout<pageProps> = (props) => {
@@ -1218,6 +1230,7 @@ const Home: pageWithLayout<pageProps> = (props) => {
             sessionColors={sessionColors}
             colorsReady={!colorsLoading}
             currentUserRankId={props.currentUserRankId}
+            currentUserRoleIds={props.currentUserRoleIds}
           />
         )}
 

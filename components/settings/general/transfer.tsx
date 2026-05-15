@@ -143,7 +143,7 @@ const TransferOwnership: FC<TransferOwnershipProps> = ({
               ) : members.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-gray-500 dark:text-gray-400">
-                    No registered members found
+                    No registered members found.
                   </div>
                 </div>
               ) : (
