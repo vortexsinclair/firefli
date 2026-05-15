@@ -66,7 +66,7 @@ const Quota: React.FC = () => {
 
   if (quotas.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="flex flex-col items-center justify-center h-full text-center">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
           <IconTarget className="w-8 h-8 text-primary" />
         </div>
