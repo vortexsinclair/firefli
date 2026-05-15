@@ -69,13 +69,6 @@ const NoticesWidget: React.FC = () => {
         </div>
         <p className="text-lg font-medium text-zinc-900 dark:text-white mb-1">No active notices</p>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">No staff currently on notice</p>
-        <button
-          onClick={() => router.push(`/workspace/${router.query.id}/notices`)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          View Notices
-          <IconChevronRight className="w-4 h-4" />
-        </button>
       </div>
     );
   }
