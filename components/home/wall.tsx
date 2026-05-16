@@ -107,7 +107,7 @@ const Wall: React.FC = () => {
 					{posts.slice(0, 2).map((post) => (
 						<div 
 							key={post.id} 
-							className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+							className="rounded-xl border border-zinc-100 dark:border-zinc-700 p-3 bg-zinc-50 dark:bg-zinc-900/50"
 						>
 							<div className="flex items-start gap-3">
 								<div 
