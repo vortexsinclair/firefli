@@ -275,6 +275,8 @@ const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [evidenceToDelete, setEvidenceToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteCaseModal, setShowDeleteCaseModal] = useState(false);
+  const [deletingCase, setDeletingCase] = useState(false);
   const canExecutePunishments =
     workspaceData.yourPermission?.includes("execute_punishments") ||
     workspaceData.isAdmin;
@@ -285,6 +287,9 @@ const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({
     workspaceData.yourPermission?.includes("edit_moderation_cases") ||
     workspaceData.isAdmin ||
     caseData.createdBy === userState.userId?.toString();
+  const canDeleteCase =
+    workspaceData.yourPermission?.includes("delete_moderation_cases") ||
+    workspaceData.isAdmin;
   const isBanAction =
     caseData.action === "temp_ban" || caseData.action === "perm_ban";
   const isKickAction = caseData.action === "kick";
@@ -502,6 +507,25 @@ const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({
     }
   };
 
+  const handleDeleteCase = async () => {
+    setDeletingCase(true);
+    try {
+      const response = await axios.delete(
+        `/api/workspace/${workspaceId}/moderation/cases/${caseId}`,
+      );
+      if (response.data.success) {
+        toast.success("Case deleted successfully");
+        router.push(`/workspace/${workspaceId}/moderation`);
+      } else {
+        toast.error(response.data.error || "Failed to delete case");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to delete case");
+    } finally {
+      setDeletingCase(false);
+    }
+  };
+
   const handleDeleteEvidence = async () => {
     if (!evidenceToDelete) return;
 
@@ -552,6 +576,20 @@ const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {canDeleteCase && (
+              <Tooltip
+                orientation="bottom"
+                tooltipText="Permanently delete this case"
+              >
+                <button
+                  onClick={() => setShowDeleteCaseModal(true)}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                >
+                  <IconTrash size={18} />
+                  <span>Delete Case</span>
+                </button>
+              </Tooltip>
+            )}
             {caseData.action && !caseData.revokedAt && canRevokePunishments && (
               <Tooltip
                 orientation="bottom"
@@ -1280,6 +1318,48 @@ const CaseDetailPage: pageWithLayout<CaseDetailProps> = ({
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteCaseModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                <IconTrash className="text-red-600 dark:text-red-400" size={24} />
+              </div>
+              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+                Delete Case
+              </h2>
+            </div>
+            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+              Are you sure you want to permanently delete this case? This will also remove any linked bans and evidence. This action cannot be undone.
+            </p>
+            <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 mb-6">
+              <div className="font-medium text-zinc-900 dark:text-white mb-1">
+                {caseData.targetUsername || caseData.targetUser?.username || `User ${caseData.targetUserId}`}
+              </div>
+              <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                {caseData.reason}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteCase}
+                disabled={deletingCase}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletingCase ? "Deleting..." : "Delete Case"}
+              </button>
+              <button
+                onClick={() => setShowDeleteCaseModal(false)}
+                disabled={deletingCase}
+                className="px-6 bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white py-2.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

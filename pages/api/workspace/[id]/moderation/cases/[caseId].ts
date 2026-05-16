@@ -264,14 +264,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const membership = user?.workspaceMemberships[0];
       const userRole = user?.roles[0];
       const isAdmin = membership?.isAdmin || false;
-      const hasEditPermission = userRole?.permissions?.includes("edit_moderation_cases") || isAdmin;
+      const hasDeletePermission = userRole?.permissions?.includes("delete_moderation_cases") || isAdmin;
 
-      if (!isAuthor && !hasEditPermission) {
+      if (!hasDeletePermission) {
         return res.status(403).json({
           success: false,
           error: "You do not have permission to delete this case",
         });
       }
+
+      if (existingCase.action === "temp_ban" || existingCase.action === "perm_ban") {
+        await prisma.playerBan.deleteMany({
+          where: {
+            workspaceGroupId: groupId,
+            userId: existingCase.targetUserId,
+            active: true,
+            reason: existingCase.reason,
+          },
+        });
+      }
+
       await prisma.moderationCase.delete({
         where: {
           id: caseId as string,
@@ -316,6 +328,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 export default async function (req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") {
     return withPermissionCheck(handler, ["view_moderation"])(req, res);
+  }
+  if (req.method === "DELETE") {
+    return withPermissionCheck(handler, ["delete_moderation_cases"])(req, res);
   }
   return handler(req, res);
 }
