@@ -88,19 +88,12 @@ const Wall: React.FC = () => {
 	return (
 		<div className="flex flex-col gap-4 h-full">
 			{posts.length === 0 ? (
-				<div className="flex flex-col items-center justify-center flex-1 text-center">
-					<div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-						<IconMessage className="w-8 h-8 text-primary" />
+				<div className="flex flex-col items-center justify-center h-full text-center">
+					<div className="w-[clamp(2rem,15cqh,4rem)] h-[clamp(2rem,15cqh,4rem)] rounded-full bg-primary/10 flex items-center justify-center mb-[clamp(0.5rem,4cqh,1rem)]">
+						<IconMessage className="w-[clamp(1rem,8cqh,2rem)] h-[clamp(1rem,8cqh,2rem)] text-primary" />
 					</div>
-					<p className="text-lg font-medium text-zinc-900 dark:text-white mb-1">No posts yet</p>
-					<p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Be the first to share something with your workspace</p>
-					<button
-						onClick={goToWall}
-						className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-					>
-						View Wall
-						<IconChevronRight className="w-4 h-4" />
-					</button>
+					<p className="text-[clamp(0.875rem,5cqh,1.125rem)] font-medium text-zinc-900 dark:text-white mb-1">No posts yet</p>
+					<p className="text-[clamp(0.75rem,3.5cqh,0.875rem)] text-zinc-500 dark:text-zinc-400">Be the first to share something with your workspace</p>
 				</div>
 			) : (
 				<div className="flex flex-col gap-4">
