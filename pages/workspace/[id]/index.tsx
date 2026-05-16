@@ -189,7 +189,7 @@ const Home: pageWithLayout = () => {
     games: {
       component: GamesWidget,
       icon: IconWorld,
-      title: "Games",
+      title: "Featured Games",
       description: "Your workspace Roblox games",
       color: "bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/20 dark:to-sky-800/20",
     },
