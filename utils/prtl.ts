@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 import type { NextApiRequest, NextApiResponse, NextApiHandler } from "next";
 
 const publicApiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 5 * 60 * 1000,
   max: 200, 
   message: { success: false, error: "Rate limit exceeded. Please try again later." },
   standardHeaders: true,
