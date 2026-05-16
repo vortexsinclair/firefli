@@ -617,7 +617,7 @@ const Home: pageWithLayout = () => {
                       )}
                     </div>
 
-                    <div className={clsx("px-6 pb-6 flex-1 min-h-0", item.i === 'new_members' ? "overflow-visible" : "overflow-hidden")}>
+                    <div className={clsx("px-6 pb-6 flex-1 min-h-0 [container-type:size]", item.i === 'new_members' ? "overflow-visible" : "overflow-hidden")}>
                       <Widget />
                     </div>
                   </div>
