@@ -37,11 +37,11 @@ const GamesWidget: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+      <div className="grid grid-cols-2 @[400px]:grid-cols-3 @[650px]:grid-cols-4 @[900px]:grid-cols-6 gap-2">
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-700 aspect-video"
+            className="animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-700 aspect-[3/2] @[650px]:aspect-[16/9] @[900px]:aspect-[16/7]"
           />
         ))}
       </div>
@@ -73,11 +73,12 @@ const GamesWidget: React.FC = () => {
   }
 
   return (
-    <div className="overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+    <div className="overflow-x-auto @[400px]:overflow-x-visible pb-1 @[400px]:pb-0">
+    <div className="flex gap-2 @[400px]:grid @[400px]:grid-cols-3 @[650px]:grid-cols-4 @[900px]:grid-cols-6">
       {games.map((game) => (
         <div
           key={game.placeId}
-          className="relative rounded-lg overflow-hidden aspect-video bg-zinc-800 shadow-sm group"
+          className="relative flex-none w-32 @[400px]:w-auto rounded-lg overflow-hidden aspect-[3/2] @[650px]:aspect-[16/9] @[900px]:aspect-[16/7] bg-zinc-800 shadow-sm group"
         >
           {game.thumbnail ? (
             <img
@@ -114,6 +115,7 @@ const GamesWidget: React.FC = () => {
           </div>
         </div>
       ))}
+    </div>
     </div>
   );
 };
