@@ -90,8 +90,8 @@ const home: FC<props> = ({ triggerToast }) => {
   const handleBannerFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      triggerToast.error("Image must be under 5 MB");
+    if (file.size > 10 * 1024 * 1024) {
+      triggerToast.error("Image must be under 10 MB");
       return;
     }
     const reader = new FileReader();
@@ -131,7 +131,7 @@ const home: FC<props> = ({ triggerToast }) => {
         </p>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
           Displayed as a background behind the greeting on your home page. PNG,
-          JPEG, WebP or GIF, under 5 MB.
+          JPEG, WebP or GIF, under 10 MB.
         </p>
 
         {bannerPreview && (

@@ -29,8 +29,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ success: false, error: 'Only PNG, JPEG, WebP or GIF images are allowed.' });
     }
 
-    if (bannerImage.length > 7 * 1024 * 1024) {
-      return res.status(400).json({ success: false, error: 'Image must be under 5 MB.' });
+    if (bannerImage.length > 14 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'Image must be under 10 MB.' });
     }
 
     const current = await getConfig('home', workspaceId);
