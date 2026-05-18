@@ -5,14 +5,15 @@ services:
     build: "."
     environment:
       SESSION_SECRET: ${SESSION_SECRET}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}}
+      DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
     depends_on:
-      db: # Disable this if you are using an external Postgres database
+      db:
         condition: service_healthy
     ports:
-      - "3000:3000" # Set these to the port you wish to run Firefli on.
-
-  # Comment out everything below this point if you are using an external Postgres database
+      - "3000:3000"
   db:
     image: "postgres:16-alpine"
     healthcheck:
@@ -29,7 +30,6 @@ services:
       - ${POSTGRES_PORT:-5432}:5432
     volumes:
       - db:/var/lib/postgresql
-
 volumes:
   db:
     driver: local
