@@ -223,20 +223,20 @@ export default function NewToTeam() {
 
   if (!members.length) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <IconUserPlus className="w-8 h-8 text-primary" />
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <div className="w-[clamp(2rem,15cqh,4rem)] h-[clamp(2rem,15cqh,4rem)] rounded-full bg-primary/10 flex items-center justify-center mb-[clamp(0.5rem,4cqh,1rem)]">
+          <IconUserPlus className="w-[clamp(1rem,8cqh,2rem)] h-[clamp(1rem,8cqh,2rem)] text-primary" />
         </div>
-        <p className="text-lg font-medium text-zinc-900 dark:text-white mb-1">No new members</p>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No new members in the last 7 days</p>
+        <p className="text-[clamp(0.875rem,5cqh,1.125rem)] font-medium text-zinc-900 dark:text-white mb-1">No new members</p>
+        <p className="text-[clamp(0.75rem,3.5cqh,0.875rem)] text-zinc-500 dark:text-zinc-400">No new members in the last 7 days</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="overflow-hidden">
-        <div className="flex gap-6 overflow-x-auto overflow-y-visible pb-4 px-1 -mx-1 sm:mx-0 sm:overflow-hidden touch-pan-x">
+      <div className="h-full w-full overflow-x-auto overflow-y-visible touch-pan-x -mx-3 px-3">
+        <div className="flex flex-nowrap gap-6 sm:gap-6 w-max h-full items-start pb-2">
           {members.map((m) => {
             const isCurrentUser = currentUserId && m.userid === currentUserId;
             const isPlaying = playingId === m.userid;
@@ -251,7 +251,7 @@ export default function NewToTeam() {
                   <img
                     src={m.picture || `/api/workspace/[id]/avatar/${m.userid}`}
                     alt={m.username}
-                    className={`w-20 h-20 ${getRandomBg(m.userid)} rounded-full object-cover border-2 border-white dark:border-zinc-800 shadow transition-all ring-2 ring-primary/10 hover:ring-primary`}
+                    className={`w-14 h-14 sm:w-20 sm:h-20 ${getRandomBg(m.userid)} rounded-full object-cover border-2 border-white dark:border-zinc-800 shadow transition-all ring-2 ring-primary/10 hover:ring-primary`}
                     onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.jpg"; }}
                   />
 
@@ -274,7 +274,7 @@ export default function NewToTeam() {
                             title={`${m.trackName} - ${m.artistName}`}
                           >
                             <div
-                              className={`w-6 h-6 rounded-full overflow-hidden shadow-md border-2 border-white dark:border-zinc-800 ${isPlaying ? "animate-spin-slow" : ""}`}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden shadow-md border-2 border-white dark:border-zinc-800 ${isPlaying ? "animate-spin-slow" : ""}`}
                             >
                               {m.artwork ? (
                                 <img
@@ -301,18 +301,18 @@ export default function NewToTeam() {
                           </button>
                         )}
                         <div
-                          className={`px-2 py-1 rounded-full shadow-md text-[10px] ${m.trackId ? "pl-5" : ""} ${
+                          className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full shadow-md text-[9px] sm:text-[10px] ${m.trackId ? "pl-4 sm:pl-5" : ""} ${
                             isPlaying
                               ? "bg-zinc-100 dark:bg-zinc-700 dark:text-white text-zinc-700 ring-2 ring-primary"
                               : "bg-zinc-100 dark:bg-zinc-600 dark:text-white text-zinc-700"
                           }`}
                         >
                           {m.introMessage ? (
-                            <span className="italic truncate max-w-[80px] text-zinc-700 dark:text-white block">
+                            <span className="italic truncate max-w-[60px] sm:max-w-[80px] text-zinc-700 dark:text-white block">
                               "{m.introMessage}"
                             </span>
                           ) : m.trackName ? (
-                            <span className="truncate max-w-[70px] text-zinc-700 dark:text-white block">
+                            <span className="truncate max-w-[50px] sm:max-w-[70px] text-zinc-700 dark:text-white block">
                               ♪ {m.trackName}
                             </span>
                           ) : null}
@@ -322,7 +322,7 @@ export default function NewToTeam() {
                   )}
                 </div>
 
-                <span className="mt-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 text-center max-w-[90px] truncate">
+                <span className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 text-center max-w-[80px] sm:max-w-[90px] truncate">
                   {m.username}
                 </span>
               </div>
@@ -360,9 +360,7 @@ export default function NewToTeam() {
                   ✕
                 </button>
               </div>
-              <div className="p-6">
-                <MemberIntroEditor />
-              </div>
+              <MemberIntroEditor />
             </div>
           </div>,
           document.body,

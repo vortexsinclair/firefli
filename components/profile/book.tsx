@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FC } from "@/types/settingsComponent";
 import { useRecoilState } from "recoil";
 import { workspacestate, loginState } from "@/state";
@@ -13,6 +13,7 @@ import {
   IconClipboardList,
   IconRocket,
   IconTrash,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import axios from "axios";
 import { useRouter } from "next/router";
@@ -56,10 +57,42 @@ const Book: FC<Props> = ({ userBook, onRefetch, logbookPermissions }) => {
   const [kickFromDiscord, setKickFromDiscord] = useState(false);
   const [banFromDiscord, setBanFromDiscord] = useState(false);
   const [banDeleteDays, setBanDeleteDays] = useState(0);
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
+
+  const TYPE_LABELS: Record<string, string> = {
+    note: "Note",
+    warning: "Warning",
+    promotion: "Promotion",
+    demotion: "Demotion",
+    rank_change: "Rank Change",
+    termination: "Termination",
+    resignation: "Resignation",
+  };
+
+  const availableTypes = [
+    logbookPermissions?.note && { value: "note", label: "Note" },
+    logbookPermissions?.warning && { value: "warning", label: "Warning" },
+    logbookPermissions?.promotion && { value: "promotion", label: "Promotion" },
+    logbookPermissions?.demotion && { value: "demotion", label: "Demotion" },
+    (rankGunEnabled && logbookPermissions?.rank) && { value: "rank_change", label: "Rank Change" },
+    logbookPermissions?.termination && { value: "termination", label: "Termination" },
+    logbookPermissions?.resignation && { value: "resignation", label: "Resignation" },
+  ].filter(Boolean) as Array<{ value: string; label: string }>;
 
   useEffect(() => {
     setLocalBook(userBook || []);
   }, [userBook]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setTypeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     const checkRankGunStatus = async () => {
@@ -349,7 +382,7 @@ const Book: FC<Props> = ({ userBook, onRefetch, logbookPermissions }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm">
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
@@ -364,272 +397,145 @@ const Book: FC<Props> = ({ userBook, onRefetch, logbookPermissions }) => {
               </p>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg">
-              <label
-                htmlFor="type"
-                className="block text-sm font-medium text-zinc-700 mb-1 dark:text-white"
-              >
-                Type
-              </label>
-              <select
-                id="type"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="block w-full rounded-lg border-gray-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-              >
-                {logbookPermissions?.note && <option value="note">Note</option>}
-                {logbookPermissions?.warning && <option value="warning">Warning</option>}
-                {logbookPermissions?.promotion && <option value="promotion">Promotion</option>}
-                {logbookPermissions?.demotion && <option value="demotion">Demotion</option>}
-                {rankGunEnabled && logbookPermissions?.rank && (
-                  <option value="rank_change">Rank Change</option>
+          <div className="space-y-3">
+            <textarea
+              id="note"
+              rows={5}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Write your comment.."
+              className="block w-full px-4 py-3 bg-transparent text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-700"
+            />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 rounded-xl">
+              <div className="flex flex-1 flex-wrap items-center gap-3 min-w-0">
+                {rankGunEnabled && logbookPermissions?.rank && (type === "promotion" || type === "demotion" || type === "rank_change" || type === "termination") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap">Rank to:</span>
+                    {loadingRanks ? (
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                        <div className="animate-spin w-3 h-3 border border-zinc-300 border-t-primary rounded-full" />
+                        Loading...
+                      </div>
+                    ) : (
+                      <select
+                        value={targetRank}
+                        onChange={(e) => setTargetRank(e.target.value)}
+                        className="text-xs px-2.5 py-1.5 bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-1 focus:ring-primary focus:border-primary"
+                      >
+                        <option value="">Select rank...</option>
+                        {ranks.filter((rank) => rank.rank > 0).map((rank) => {
+                          const duplicates = ranks.filter(r => r.rank > 0 && r.name === rank.name && r.rank === rank.rank);
+                          const displayText = duplicates.length > 1
+                            ? `${rank.name} (${rank.rank}, ID: ${rank.id})`
+                            : `${rank.name} (${rank.rank})`;
+                          return <option key={rank.id} value={rank.id}>{displayText}</option>;
+                        })}
+                      </select>
+                    )}
+                  </div>
                 )}
-                {logbookPermissions?.termination && <option value="termination">Termination</option>}
-                {logbookPermissions?.resignation && <option value="resignation">Resignation</option>}
-              </select>
-            </div>
 
-            {rankGunEnabled &&
-              logbookPermissions?.rank &&
-              (type === "promotion" ||
-                type === "demotion" ||
-                type === "rank_change" ||
-                type === "termination") && (
-                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <IconRocket className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                      Ranking Integration Active
-                    </h3>
-                  </div>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    {type === "promotion" &&
-                      "This will automatically promote the user in the Roblox group."}
-                    {type === "demotion" &&
-                      "This will automatically demote the user in the Roblox group."}
-                    {type === "rank_change" &&
-                      "This will automatically change the user's rank to the specified rank."}
-                    {type === "termination" &&
-                      "This will automatically terminate the user and remove them from the workspace."}
-                  </p>
-                </div>
-              )}
-
-            {rankGunEnabled &&
-              !logbookPermissions?.rank &&
-              (type === "promotion" ||
-                type === "demotion" ||
-                type === "rank_change" ||
-                type === "termination") && (
-                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <IconAlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      Entry Only - No Automatic Rank Action
-                    </h3>
-                  </div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    This will create a logbook entry but will not automatically change the user's rank. You need the "Logbook - Use Ranking" permission to execute automatic rank changes.
-                  </p>
-                </div>
-              )}
-
-            {type === "rank_change" && (
-              <div className="bg-zinc-50 dark:bg-zinc-800/60 p-4 rounded-lg">
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Target Rank
-                </label>
-                {loadingRanks ? (
-                  <div className="flex items-center gap-2 p-3 text-sm text-zinc-500 dark:text-zinc-400">
-                    <div className="animate-spin w-4 h-4 border-2 border-zinc-300 border-t-primary rounded-full"></div>
-                    Loading ranks...
-                  </div>
-                ) : (
-                  <select
-                    value={targetRank}
-                    onChange={(e) => setTargetRank(e.target.value)}
-                    className="block w-full rounded-lg border-gray-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                  >
-                    <option value="">Select a rank...</option>
-                    {ranks
-                      .filter((rank) => rank.rank > 0)
-                      .map((rank) => {
-                        const duplicates = ranks.filter(
-                          r => r.rank > 0 && r.name === rank.name && r.rank === rank.rank
-                        );
-                        const displayText = duplicates.length > 1
-                          ? `${rank.name} (Rank ${rank.rank}, ID: ${rank.id})`
-                          : `${rank.name} (Rank ${rank.rank})`;
-                        return (
-                          <option key={rank.id} value={rank.id}>
-                            {displayText}
-                          </option>
-                        );
-                      })}
-                  </select>
+                {bloxlinkEnabled && discordEnabled && (type === "warning" || type === "promotion" || type === "demotion" || type === "termination") && (
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer whitespace-nowrap select-none">
+                    <input
+                      type="checkbox"
+                      checked={notifyDiscord}
+                      onChange={(e) => setNotifyDiscord(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-primary border-zinc-300 dark:border-zinc-600 focus:ring-primary"
+                    />
+                    <span className="text-zinc-600 dark:text-zinc-400">Notify via Discord</span>
+                  </label>
                 )}
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Select the rank that the user should be set to.
-                </p>
-              </div>
-            )}
-
-            {/* Discord Notification Checkbox - requires both Bloxlink and Discord */}
-            {bloxlinkEnabled && discordEnabled && (type === "warning" || type === "promotion" || type === "demotion" || type === "termination") && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <input
-                    id="notify-discord"
-                    type="checkbox"
-                    checked={notifyDiscord}
-                    onChange={(e) => setNotifyDiscord(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-blue-600 bg-white border-blue-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <div className="flex-1">
-                    <label htmlFor="notify-discord" className="text-sm font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
-                      Notify user via Discord DM
-                    </label>
-                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                      Send a direct message to the user on Discord about this {type === "warning" ? "warning" : type}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Termination Actions - only show for termination type when Discord notification is enabled */}
                 {type === "termination" && notifyDiscord && bloxlinkEnabled && (
-                  <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
-                    <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-3">
-                      Discord Server Actions
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          id="kick-discord"
-                          type="checkbox"
-                          checked={kickFromDiscord}
-                          onChange={(e) => {
-                            setKickFromDiscord(e.target.checked);
-                            if (e.target.checked) setBanFromDiscord(false);
-                          }}
-                          className="w-4 h-4 text-red-600 bg-white border-red-300 rounded focus:ring-red-500 focus:ring-2"
-                        />
-                        <label htmlFor="kick-discord" className="text-sm text-red-700 dark:text-red-300 cursor-pointer">
-                          Kick from Discord server
-                        </label>
-                      </div>
-                      <div className="flex items-start space-x-3">
-                        <input
-                          id="ban-discord"
-                          type="checkbox"
-                          checked={banFromDiscord}
-                          onChange={(e) => {
-                            setBanFromDiscord(e.target.checked);
-                            if (e.target.checked) setKickFromDiscord(false);
-                          }}
-                          className="mt-1 w-4 h-4 text-red-600 bg-white border-red-300 rounded focus:ring-red-500 focus:ring-2"
-                        />
-                        <div className="flex-1">
-                          <label htmlFor="ban-discord" className="text-sm text-red-700 dark:text-red-300 cursor-pointer">
-                            Ban from Discord server
-                          </label>
-                          {banFromDiscord && (
-                            <div className="mt-2">
-                              <label className="block text-xs text-red-600 dark:text-red-400 mb-1">
-                                Delete message history:
-                              </label>
-                              <select
-                                value={banDeleteDays}
-                                onChange={(e) => setBanDeleteDays(parseInt(e.target.value))}
-                                className="text-xs px-2 py-1 border border-red-200 dark:border-red-600 rounded bg-white dark:bg-zinc-800 text-red-700 dark:text-red-300"
-                              >
-                                <option value={0}>Don't delete messages</option>
-                                <option value={1}>1 day</option>
-                                <option value={2}>2 days</option>
-                                <option value={3}>3 days</option>
-                                <option value={7}>7 days</option>
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                  <>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer whitespace-nowrap select-none">
+                      <input
+                        type="checkbox"
+                        checked={kickFromDiscord}
+                        onChange={(e) => { setKickFromDiscord(e.target.checked); if (e.target.checked) setBanFromDiscord(false); }}
+                        className="w-3.5 h-3.5 rounded text-red-600 border-zinc-300 focus:ring-red-500"
+                      />
+                      <span className="text-zinc-500 dark:text-zinc-400">Kick from server</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer whitespace-nowrap select-none">
+                      <input
+                        type="checkbox"
+                        checked={banFromDiscord}
+                        onChange={(e) => { setBanFromDiscord(e.target.checked); if (e.target.checked) setKickFromDiscord(false); }}
+                        className="w-3.5 h-3.5 rounded text-red-600 border-zinc-300 focus:ring-red-500"
+                      />
+                      <span className="text-zinc-500 dark:text-zinc-400">Ban from server</span>
+                    </label>
+                    {banFromDiscord && (
+                      <select
+                        value={banDeleteDays}
+                        onChange={(e) => setBanDeleteDays(parseInt(e.target.value))}
+                        className="text-xs px-2 py-1 bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded text-zinc-700 dark:text-zinc-300"
+                      >
+                        <option value={0}>Keep messages</option>
+                        <option value={1}>Delete 1 day</option>
+                        <option value={2}>Delete 2 days</option>
+                        <option value={3}>Delete 3 days</option>
+                        <option value={7}>Delete 7 days</option>
+                      </select>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="relative flex-shrink-0" ref={typeDropdownRef}>
+                <div className="flex rounded-lg overflow-hidden shadow-sm">
+                  <button
+                    onClick={addNote}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {rankGunEnabled && logbookPermissions?.rank && (type === "promotion" || type === "demotion" || type === "rank_change" || type === "termination") ? "Executing..." : "Logging..."}
+                      </>
+                    ) : rankGunEnabled && logbookPermissions?.rank && (type === "promotion" || type === "demotion" || type === "rank_change" || type === "termination") ? (
+                      `Log & ${type === "rank_change" ? "Change Rank" : type === "promotion" ? "Promote" : type === "demotion" ? "Demote" : "Terminate"}`
+                    ) : (
+                      `Log ${TYPE_LABELS[type] || "Note"}`
+                    )}
+                  </button>
+                  {availableTypes.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setTypeDropdownOpen((o) => !o)}
+                      disabled={isSubmitting}
+                      className="px-2 py-2 text-white bg-primary hover:bg-primary/80 border-l border-white/20 focus:outline-none transition-colors disabled:opacity-50"
+                      aria-label="Change entry type"
+                    >
+                      <IconChevronDown size={16} />
+                    </button>
+                  )}
+                </div>
+                {typeDropdownOpen && availableTypes.length > 1 && (
+                  <div className="absolute right-0 bottom-full mb-1 w-44 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 z-20 overflow-hidden">
+                    {availableTypes.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => { setType(t.value); setTypeDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                          type === t.value
+                            ? "text-primary font-medium bg-primary/5"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            )}
-
-            <div className="p-4 rounded-lg">
-              <label
-                htmlFor="note"
-                className="block text-sm font-medium text-zinc-700 dark:text-white mb-1"
-              >
-                Note
-              </label>
-              <textarea
-                id="note"
-                rows={4}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Enter your note here..."
-                className="block w-full rounded-lg border-gray-400 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-              />
             </div>
-            <button
-              onClick={addNote}
-              disabled={isSubmitting}
-              className="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  {rankGunEnabled &&
-                  (type === "promotion" ||
-                    type === "demotion" ||
-                    type === "rank_change" ||
-                    type === "termination")
-                    ? "Executing..."
-                    : "Adding..."}
-                </>
-              ) : rankGunEnabled &&
-                logbookPermissions?.rank &&
-                (type === "promotion" ||
-                  type === "demotion" ||
-                  type === "rank_change" ||
-                  type === "termination") ? (
-                `Add Note & ${
-                  type === "rank_change"
-                    ? "Change Rank"
-                    : type === "promotion"
-                    ? "Promote"
-                    : type === "demotion"
-                    ? "Demote"
-                    : "Terminate"
-                }`
-              ) : (
-                "Add Note"
-              )}
-            </button>
           </div>
         </div>
       </div>
